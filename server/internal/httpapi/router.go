@@ -113,21 +113,36 @@ func (s *Server) cors(next http.Handler) http.Handler {
 
 // --- handlers ---
 
-func (s *Server) handleBanner(w http.ResponseWriter, r *http.Request) {
-	data, err := cache.Remember(s.cache, "banner", 30*time.Second, func() ([]types.Token, error) {
-		return s.prov.Banner(r.Context())
-	})
-	respond(w, data, err)
+// snapshot reads the background poller's last in-memory value for key (fresh or
+// stale — never an on-demand upstream fetch). The cache never evicts, so once
+// the poller has written it, this is always served instantly.
+func snapshot[T any](c *cache.Cache, key string) T {
+	var zero T
+	if v, ok := c.Snapshot(key); ok {
+		if t, ok := v.(T); ok {
+			return t
+		}
+	}
+	return zero
 }
 
-func (s *Server) handleTrending(w http.ResponseWriter, r *http.Request) {
-	data, err := cache.Remember(s.cache, "trending", 30*time.Second, func() ([]types.TrendingToken, error) {
-		return s.prov.Trending(r.Context())
-	})
-	respond(w, data, err)
+func (s *Server) handleBanner(w http.ResponseWriter, _ *http.Request) {
+	out := snapshot[[]types.Token](s.cache, "banner")
+	if out == nil {
+		out = []types.Token{}
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
-func (s *Server) handleDiscover(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleTrending(w http.ResponseWriter, _ *http.Request) {
+	out := snapshot[[]types.TrendingToken](s.cache, "trending")
+	if out == nil {
+		out = []types.TrendingToken{}
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+func (s *Server) handleDiscover(w http.ResponseWriter, _ *http.Request) {
 	feeds := types.DiscoverFeeds{
 		New:        []types.DiscoveryToken{},
 		Graduating: []types.DiscoveryToken{},
@@ -137,14 +152,12 @@ func (s *Server) handleDiscover(w http.ResponseWriter, r *http.Request) {
 	if s.discover != nil {
 		feeds.New, feeds.Graduating = s.discover()
 	}
-	// Trending comes from the cached provider feed (kept warm by the poller).
-	trending, err := cache.Remember(s.cache, "trending", 30*time.Second, func() ([]types.TrendingToken, error) {
-		return s.prov.Trending(r.Context())
-	})
-	if err == nil {
-		feeds.Trending = trending
+	// Trending + Big are served straight from the poller's in-memory snapshot —
+	// no on-demand fetch on the request path, so /discover can't block or expire
+	// onto a cold GeckoTerminal call.
+	if tr := snapshot[[]types.TrendingToken](s.cache, "trending"); tr != nil {
+		feeds.Trending = tr
 	}
-	// BIG (large caps) is computed as a side effect of the trending fetch above.
 	if big := s.prov.Big(); len(big) > 0 {
 		feeds.Big = big
 	}

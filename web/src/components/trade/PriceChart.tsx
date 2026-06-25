@@ -87,6 +87,10 @@ export function PriceChart({
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Area" | "Candlestick"> | null>(null);
   const lastBarRef = useRef<Bar | null>(null);
+  // How many bars the series currently holds — so a transient short payload from
+  // the backend (a cold-start fallback, a cache-expiry hiccup) can never wipe a
+  // healthy chart down to a handful of bars on reconcile.
+  const barsLenRef = useRef(0);
   // Identifies the current (token, timeframe, kind). When it changes we fit the
   // view; otherwise we preserve the user's zoom/pan across reconciles.
   const viewKeyRef = useRef<string>("");
@@ -225,6 +229,7 @@ export function PriceChart({
       if (key !== viewKeyRef.current) {
         series.setData([]);
         lastBarRef.current = null;
+        barsLenRef.current = 0;
       }
       return;
     }
@@ -241,6 +246,15 @@ export function PriceChart({
     }
 
     const fresh = key !== viewKeyRef.current;
+
+    // Reconcile guard: if we're already showing a healthy history and this payload
+    // collapsed to a fraction of it (a transient backend fallback), keep what we
+    // have — the live edge still advances via the stream. Token/timeframe switches
+    // change the view key (fresh) and are never guarded; legitimate growth passes.
+    if (!fresh && barsLenRef.current >= 30 && bars.length < barsLenRef.current * 0.5) {
+      return;
+    }
+
     const range = fresh ? null : chart.timeScale().getVisibleLogicalRange();
 
     if (kind === "candle") {
@@ -262,6 +276,7 @@ export function PriceChart({
       chart.timeScale().setVisibleLogicalRange(range); // keep the user's zoom/pan
     }
     lastBarRef.current = last;
+    barsLenRef.current = bars.length;
   }, [data, kind, address, tf, metric, scale]);
 
   const resetZoom = () => chartRef.current?.timeScale().fitContent();

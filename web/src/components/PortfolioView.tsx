@@ -21,7 +21,7 @@ export function PortfolioView() {
       <SiteHeader />
       <TokenBanner direction="left" />
       <main className="flex-1 bg-app-glow">
-        <div className="mx-auto max-w-2xl px-4 sm:px-6 py-10">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 py-10">
           <div className="flex items-end justify-between flex-wrap gap-4">
             <div>
               <h1 className="font-display font-bold text-4xl sm:text-5xl tracking-tight lowercase">

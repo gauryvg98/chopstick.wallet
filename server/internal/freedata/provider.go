@@ -380,27 +380,25 @@ func (p *Provider) OHLCV(ctx context.Context, mint string, tf types.Timeframe) (
 		return lastN(bucketCandles(p.pl.candles(mint), bs), 120), nil
 	}
 	if tf == types.Tf1m {
-		// 1m is the default and most-swapped timeframe. Serve it from our own price
-		// sampler whenever we have enough history — every trending/Big token is
-		// sampled continuously, so swapping between them costs ZERO GeckoTerminal
-		// calls. Only cold/thin tokens fall through to a single GT fetch, and if GT
-		// is throttled we still return the sampler's bars (the WS stream fills the
-		// live edge) rather than failing the chart with a 502.
+		// 1m+ has full history on GeckoTerminal (300 candles ≈ 5h), so ALWAYS serve
+		// it as the backbone — otherwise the chart only shows the window since we
+		// started sampling this mint (i.e. since you opened it), not its real
+		// history. The WS candle stream fills the live edge on top.
+		//
+		// On a GT failure we return the ERROR rather than substituting the sampler's
+		// short window: the handler's cache serves the last-good full history
+		// (stale-while-error), so a transient throttle can never collapse a healthy
+		// 300-candle chart down to the dozen bars the sampler happens to hold.
+		// (Returning a thin "success" here would defeat that cache and, with its 6s
+		// TTL, hammer GT every 6s — keeping it throttled in a feedback loop.)
 		p.pl.watchMint(mint)
-		if cs := lastN(bucketCandles(p.pl.candles(mint), 60), 120); len(cs) >= 30 {
-			return cs, nil
-		}
-		// Cold/thin token — try GeckoTerminal for a real backbone, but bound the
-		// wait: if GT is throttled and we'd hang behind the backoff, abandon and
-		// serve whatever the sampler has (the WS stream still fills the live edge),
-		// so the chart returns in seconds instead of timing out.
 		gctx, cancel := context.WithTimeout(ctx, 6*time.Second)
 		cs, e := p.gt.ohlcv(gctx, pool, tf)
 		cancel()
-		if e == nil && len(cs) > 0 {
-			return cs, nil
+		if e != nil {
+			return nil, e
 		}
-		return lastN(bucketCandles(p.pl.candles(mint), 60), 120), nil
+		return cs, nil
 	}
 	return p.gt.ohlcv(ctx, pool, tf)
 }

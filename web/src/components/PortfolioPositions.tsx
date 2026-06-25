@@ -92,64 +92,74 @@ export function PortfolioPositions({ owner }: { owner: string }) {
         <PnlStat label="Realized" sub="closed" sol={realizedSol} pct={realizedPct} solPrice={solPrice} />
       </div>
 
-      {/* deposits + fees */}
-      <div className="grid grid-cols-2 gap-3">
-        <FlowStat label="Deposited" sub="funded into wallet" sol={deposited} solPrice={solPrice} />
-        <FlowStat label="Fees paid" sub="network + priority" sol={feesSol} solPrice={solPrice} />
-      </div>
-
-      {/* positions */}
-      <div className="rounded-2xl border border-line bg-surface/40 overflow-hidden">
-        <div className="px-4 py-3 border-b border-line flex items-center justify-between">
-          <span className="text-sm font-bold text-white">Positions</span>
-          <span className="text-[11px] text-faint">current PnL</span>
-        </div>
-        <div className="divide-y divide-line/60">
-          {/* SOL */}
-          <div className="flex items-center gap-3 px-4 py-3">
-            <TokenAvatar symbol="SOL" logoURI={null} size={34} />
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-semibold text-white">SOL</div>
-              <div className="text-xs text-muted tnum">{solBalance.toFixed(4)} SOL</div>
-            </div>
-            <div className="text-right text-sm font-semibold text-white tnum">
-              {formatUsd(solBalance * solPrice)}
-            </div>
-          </div>
-
-          {tokens.map((t) => (
-            <PositionRow
-              key={t.mint}
-              mint={t.mint}
-              amount={t.amount}
-              avgEntrySol={posByMint.get(t.mint)?.avgEntrySol ?? 0}
-              solPrice={solPrice}
-              onReport={report}
-            />
-          ))}
-
-          {tokens.length === 0 && (
-            <div className="px-4 py-6 text-center text-sm text-faint">
-              No token positions yet — just SOL.
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* recent activity */}
-      {activity && activity.items.length > 0 && (
-        <div className="rounded-2xl border border-line bg-surface/40 overflow-hidden">
+      {/* main grid: positions (left, wider) + side rail (right) */}
+      <div className="grid gap-4 lg:grid-cols-5 items-start">
+        {/* positions */}
+        <div className="lg:col-span-3 rounded-2xl border border-line bg-surface/40 overflow-hidden">
           <div className="px-4 py-3 border-b border-line flex items-center justify-between">
-            <span className="text-sm font-bold text-white">Recent activity</span>
-            <span className="text-[11px] text-faint">tap to view on Solscan</span>
+            <span className="text-sm font-bold text-white">Positions</span>
+            <span className="text-[11px] text-faint">
+              {tokens.length + 1} {tokens.length === 0 ? "asset" : "assets"} · value / PnL
+            </span>
           </div>
           <div className="divide-y divide-line/60">
-            {activity.items.map((it) => (
-              <ActivityRow key={it.signature} item={it} solPrice={solPrice} />
+            {/* SOL */}
+            <div className="flex items-center gap-3 px-4 py-3">
+              <TokenAvatar symbol="SOL" logoURI={null} size={34} />
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-semibold text-white">SOL</div>
+                <div className="text-xs text-muted tnum">{solBalance.toFixed(4)} SOL</div>
+              </div>
+              <div className="text-right text-sm font-semibold text-white tnum">
+                {formatUsd(solBalance * solPrice)}
+              </div>
+            </div>
+
+            {tokens.map((t) => (
+              <PositionRow
+                key={t.mint}
+                mint={t.mint}
+                amount={t.amount}
+                avgEntrySol={posByMint.get(t.mint)?.avgEntrySol ?? 0}
+                solPrice={solPrice}
+                onReport={report}
+              />
             ))}
+
+            {tokens.length === 0 && (
+              <div className="px-4 py-6 text-center text-sm text-faint">
+                No token positions yet — just SOL.
+              </div>
+            )}
           </div>
         </div>
-      )}
+
+        {/* side rail: flows + scrollable activity */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <FlowStat label="Deposited" sub="funded in" sol={deposited} solPrice={solPrice} />
+            <FlowStat label="Fees paid" sub="network" sol={feesSol} solPrice={solPrice} />
+          </div>
+
+          <div className="rounded-2xl border border-line bg-surface/40 overflow-hidden flex flex-col">
+            <div className="px-4 py-3 border-b border-line flex items-center justify-between">
+              <span className="text-sm font-bold text-white">Recent activity</span>
+              <span className="text-[11px] text-faint">Solscan ↗</span>
+            </div>
+            {activity && activity.items.length > 0 ? (
+              <div className="max-h-[420px] overflow-y-auto divide-y divide-line/60 scroll-thin">
+                {activity.items.map((it) => (
+                  <ActivityRow key={it.signature} item={it} solPrice={solPrice} />
+                ))}
+              </div>
+            ) : (
+              <div className="px-4 py-10 text-center text-sm text-faint">
+                No activity yet.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -205,9 +215,14 @@ function ActivityRow({ item, solPrice }: { item: ActivityItem; solPrice: number 
         </div>
       </div>
       {item.solAmount > 0 && (
-        <div className={cn("text-right text-sm font-semibold tnum shrink-0", color)}>
-          {k.sign}
-          {formatSol(item.solAmount)}
+        <div className="text-right shrink-0">
+          <div className={cn("text-sm font-semibold tnum", color)}>
+            {k.sign}
+            {formatSol(item.solAmount)}
+          </div>
+          <div className="text-[10px] text-faint tnum">
+            {formatUsd(item.solAmount * solPrice)}
+          </div>
         </div>
       )}
     </a>

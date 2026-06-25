@@ -5,8 +5,10 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import { PriceText } from "@/components/ui/PriceText";
 import { cn } from "@/lib/cn";
@@ -24,8 +26,75 @@ export interface StreamBar {
   close: number;
 }
 
+/**
+ * External price store. Prices live OUTSIDE React state so a tick only
+ * re-renders the components watching *that* mint (per-mint listeners), and at
+ * most once per animation frame (changes are coalesced and flushed on rAF).
+ *
+ * The old design kept the whole price map in a single context value, so every
+ * tick for any mint changed the value's identity and re-rendered every
+ * `useLivePrice` consumer on the page — the main-thread churn that made token
+ * switches lag. This keeps the live feel (≥60fps to the eye) without the storm.
+ */
+function createPriceStore() {
+  const prices = new Map<string, Tick>();
+  const listeners = new Map<string, Set<() => void>>();
+  const pending = new Set<string>();
+  let raf: number | null = null;
+
+  const scheduleFlush = () => {
+    if (raf !== null) return;
+    const run = () => {
+      raf = null;
+      const changed = [...pending];
+      pending.clear();
+      for (const mint of changed) {
+        const ls = listeners.get(mint);
+        if (ls) for (const l of ls) l();
+      }
+    };
+    raf =
+      typeof requestAnimationFrame !== "undefined"
+        ? requestAnimationFrame(run)
+        : (setTimeout(run, 16) as unknown as number);
+  };
+
+  return {
+    get: (mint: string): Tick | undefined => prices.get(mint),
+    apply: (data: Record<string, Tick>) => {
+      let any = false;
+      for (const mint in data) {
+        const t = data[mint];
+        if (!t) continue;
+        const prev = prices.get(mint);
+        if (!prev || prev.price !== t.price || prev.change24h !== t.change24h) {
+          prices.set(mint, t);
+          pending.add(mint);
+          any = true;
+        }
+      }
+      if (any) scheduleFlush();
+    },
+    subscribe: (mint: string, cb: () => void): (() => void) => {
+      let set = listeners.get(mint);
+      if (!set) {
+        set = new Set();
+        listeners.set(mint, set);
+      }
+      set.add(cb);
+      return () => {
+        const s = listeners.get(mint);
+        if (!s) return;
+        s.delete(cb);
+        if (s.size === 0) listeners.delete(mint);
+      };
+    },
+  };
+}
+type PriceStore = ReturnType<typeof createPriceStore>;
+
 interface LivePricesCtx {
-  prices: Record<string, Tick>;
+  store: PriceStore;
   subscribe: (mints: string[]) => () => void;
   subscribeCandles: (mint: string, tf: string, cb: (bar: StreamBar) => void) => () => void;
   subscribeDiscover: (cb: (feed: unknown) => void) => () => void;
@@ -49,7 +118,10 @@ const WS_URL = (() => {
 })();
 
 export function LivePricesProvider({ children }: { children: React.ReactNode }) {
-  const [prices, setPrices] = useState<Record<string, Tick>>({});
+  const storeRef = useRef<PriceStore | null>(null);
+  if (!storeRef.current) storeRef.current = createPriceStore();
+  const store = storeRef.current;
+
   const wsRef = useRef<WebSocket | null>(null);
   const refcounts = useRef<Map<string, number>>(new Map());
   // "mint|tf" -> set of candle callbacks
@@ -88,7 +160,8 @@ export function LivePricesProvider({ children }: { children: React.ReactNode }) 
         try {
           const m = JSON.parse(e.data);
           if (m.type === "prices" && m.data) {
-            setPrices((prev) => ({ ...prev, ...m.data }));
+            // Coalesced, per-mint — no global re-render.
+            store.apply(m.data as Record<string, Tick>);
           } else if (m.type === "candle" && m.bar) {
             const cbs = candleCbs.current.get(`${m.mint}|${m.tf}`);
             if (cbs) for (const cb of cbs) cb(m.bar as StreamBar);
@@ -114,7 +187,7 @@ export function LivePricesProvider({ children }: { children: React.ReactNode }) 
       clearTimeout(timer);
       wsRef.current?.close();
     };
-  }, []);
+  }, [store]);
 
   const subscribe = useCallback((mints: string[]) => {
     const newly: string[] = [];
@@ -192,13 +265,12 @@ export function LivePricesProvider({ children }: { children: React.ReactNode }) 
     };
   }, []);
 
-  return (
-    <Ctx.Provider
-      value={{ prices, subscribe, subscribeCandles, subscribeDiscover, subscribeTrades }}
-    >
-      {children}
-    </Ctx.Provider>
+  const value = useMemo<LivePricesCtx>(
+    () => ({ store, subscribe, subscribeCandles, subscribeDiscover, subscribeTrades }),
+    [store, subscribe, subscribeCandles, subscribeDiscover, subscribeTrades]
   );
+
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
 /** Subscribe to the live discover feed (new + graduating + trending). */
@@ -251,20 +323,31 @@ export function useWatchMints(mints: string[]) {
   }, [ctx, key]);
 }
 
-/** Live price + flash direction for one mint (subscribes while mounted). */
+/** Live price + flash direction for one mint (subscribes while mounted). Only
+ *  re-renders when THIS mint ticks, at most once per animation frame. */
 export function useLivePrice(mint?: string | null) {
   const ctx = useContext(Ctx);
-  const prevRef = useRef<number | undefined>(undefined);
-  const [dir, setDir] = useState<"up" | "down" | null>(null);
 
+  // Tell the backend to stream this mint (refcounted across all consumers).
   useEffect(() => {
     if (!mint || !ctx) return;
     return ctx.subscribe([mint]);
   }, [mint, ctx]);
 
-  const tick = mint && ctx ? ctx.prices[mint] : undefined;
+  const store = ctx?.store;
+  const subscribe = useCallback(
+    (cb: () => void) => (store && mint ? store.subscribe(mint, cb) : () => {}),
+    [store, mint]
+  );
+  const getSnapshot = useCallback(
+    () => (store && mint ? store.get(mint) : undefined),
+    [store, mint]
+  );
+  const tick = useSyncExternalStore(subscribe, getSnapshot, () => undefined);
   const price = tick?.price;
 
+  const prevRef = useRef<number | undefined>(undefined);
+  const [dir, setDir] = useState<"up" | "down" | null>(null);
   useEffect(() => {
     if (price === undefined) return;
     const prev = prevRef.current;

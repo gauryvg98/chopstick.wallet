@@ -295,7 +295,10 @@ func pollTrending(ctx context.Context, p *freedata.Provider, c *cache.Cache) {
 			log.Printf("poller: trending refresh failed: %v", err)
 			return
 		}
-		c.Put("trending", tr, 90*time.Second)
+		// Long TTL: these keys are served straight from this in-memory snapshot
+		// (handlers read via Snapshot, which never re-fetches), so the value must
+		// outlive the poll cadence — the poller is the only writer.
+		c.Put("trending", tr, 10*time.Minute)
 		n := len(tr)
 		if n > 16 {
 			n = 16
@@ -304,7 +307,7 @@ func pollTrending(ctx context.Context, p *freedata.Provider, c *cache.Cache) {
 		for _, t := range tr[:n] {
 			banner = append(banner, t.Token)
 		}
-		c.Put("banner", banner, 90*time.Second)
+		c.Put("banner", banner, 10*time.Minute)
 	}
 	refresh()
 	// Trending membership shifts over minutes; live prices ride the WS stream, not

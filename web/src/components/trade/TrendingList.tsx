@@ -8,6 +8,7 @@ import { TokenAvatar } from "@/components/ui/TokenAvatar";
 import { ChangeText } from "@/components/ui/ChangeText";
 import { LivePrice } from "@/lib/livePrices";
 import { useSpotlight } from "@/components/TokenSpotlight";
+import { useActiveToken } from "@/lib/activeToken";
 import { formatCompactUsd, shortAddr, timeAgo } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import type { DiscoveryToken, TrendingToken } from "@/lib/api/types";
@@ -17,12 +18,24 @@ type Tab = "trending" | "big" | "new";
 // Module-level so the selected tab survives a remount (e.g. route change).
 let persistedTab: Tab = "trending";
 
+// Let modified clicks (new tab / new window / middle-click) fall through to the
+// browser; intercept only a plain left-click for the instant client switch.
+function isPlainClick(e: React.MouseEvent) {
+  return !(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0);
+}
+
 function TrendingRow({ t, active }: { t: TrendingToken; active: boolean }) {
   const { open } = useSpotlight();
+  const { select } = useActiveToken();
   return (
     <Link
       href={`/trade/${t.address}`}
       scroll={false}
+      onClick={(e) => {
+        if (!isPlainClick(e)) return;
+        e.preventDefault();
+        select(t); // instant switch from the data we already have
+      }}
       className={cn(
         "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors",
         active ? "bg-surface-2 ring-1 ring-line-2" : "hover:bg-white/5"
@@ -66,10 +79,16 @@ function TrendingRow({ t, active }: { t: TrendingToken; active: boolean }) {
 
 function NewRow({ t, active }: { t: DiscoveryToken; active: boolean }) {
   const { open } = useSpotlight();
+  const { select } = useActiveToken();
   return (
     <Link
       href={`/trade/${t.address}`}
       scroll={false}
+      onClick={(e) => {
+        if (!isPlainClick(e)) return;
+        e.preventDefault();
+        select(t); // instant switch from the data we already have
+      }}
       className={cn(
         "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors",
         active ? "bg-surface-2 ring-1 ring-line-2" : "hover:bg-white/5"
