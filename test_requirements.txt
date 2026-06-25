@@ -1,0 +1,39 @@
+Hi i saw you applied for Founding Engineer at ChadWallet.
+
+here is the initial screen: make a fomo.family like landing page (minimum) + trading page (bonus)
+
+1. use ChadWallet brand
+ a. assets: https://drive.google.com/drive/folders/1j4PZng-sJHxqAATUF1WYw1_jm8nyQwCE
+ b. mobile app links:
+ - android: https://play.google.com/store/apps/details?id=xyz.chadwallet.www
+ - iphone: https://apps.apple.com/us/app/chadwallet/id6757367474
+
+2. sign in with Apple/Google through Privy
+
+3. supports Solana
+
+4. rotating token banners at the top and bottom
+ a. tapping a token in the banner should open the trading page
+
+5. trading ui (if you don't have the time, it is OK to not do this task. this can be follow-up)
+ a. left: trending tokens list
+ b. middle: token info, price chart, list of holders and live trades
+ c. right: buy & sell, user's position
+
+tools:
+1. ai tools
+2. next.js, tailwind
+3. supabase, cloudflare, vercel
+5. Privy: https://privy.io
+6. BirdEye: https://birdeye.so/data-api
+7. RPC: https://www.alchemy.com/rpc-api
+8. TradingView: https://www.tradingview.com/charting-library-docs/latest/api/
+9. Jupiter: https://developers.jup.ag/docs/get-started
+
+tips:
+1. power the app with real data.
+2. all services have free tier
+
+deadline: by the end of next weekend June 28
+
+once you are done. please share the live preview. i’ll review and get back to you.

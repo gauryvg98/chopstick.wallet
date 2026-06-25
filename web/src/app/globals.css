@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+/* ===== ChadWallet brand system ===== */
+@theme {
+  /* App (trading) surface — near-black with green accent */
+  --color-ink: #0a0b0d;
+  --color-ink-2: #101216;
+  --color-surface: #15171b;
+  --color-surface-2: #1b1e24;
+  --color-line: #262a31;
+  --color-line-2: #31363f;
+  --color-muted: #8a909b;
+  --color-faint: #5b616b;
+
+  /* Brand green + market colors */
+  --color-chad: #22e07b;
+  --color-chad-dark: #15b864;
+  --color-up: #22e07b;
+  --color-down: #ff5247;
+
+  /* Marketing gradient stops (from app splash) */
+  --color-sky: #3aa6f0;
+  --color-teal: #3fd0c9;
+  --color-mint: #8fe6b0;
+
+  /* Fonts (wired in layout.tsx via next/font) */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-space), var(--font-inter), sans-serif;
+
+  /* Motion */
+  --animate-marquee: marquee 40s linear infinite;
+  --animate-marquee-rev: marquee-rev 40s linear infinite;
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes marquee-rev {
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0); }
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    font-family: var(--font-sans);
+  }
+  /* Tabular figures for all price/number readouts */
+  .tnum { font-variant-numeric: tabular-nums; }
+}
+
+/* Marketing gradient backdrop: sky → teal → mint */
+.bg-chad-gradient {
+  background: linear-gradient(180deg, #3aa6f0 0%, #45c5cb 42%, #8fe6b0 100%);
+}
+/* Subtle dark radial glow for app sections */
+.bg-app-glow {
+  background:
+    radial-gradient(60rem 40rem at 50% -10%, rgba(34, 224, 123, 0.12), transparent 70%),
+    var(--color-ink);
+}
+
+/* Marquee: duplicate the track and translate -50% for a seamless loop */
+.marquee-track { will-change: transform; }
+.marquee-group:hover .marquee-track { animation-play-state: paused; }
+
+/* Thin custom scrollbars inside app panels */
+.scroll-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+.scroll-thin::-webkit-scrollbar-thumb { background: var(--color-line-2); border-radius: 9999px; }
+.scroll-thin::-webkit-scrollbar-track { background: transparent; }
+
+/* Live price tick flash */
+@keyframes flash-up {
+  from { background-color: rgba(34, 224, 123, 0.3); }
+  to { background-color: transparent; }
+}
+@keyframes flash-down {
+  from { background-color: rgba(255, 82, 71, 0.3); }
+  to { background-color: transparent; }
+}
+.flash-up { animation: flash-up 0.7s ease-out; border-radius: 5px; }
+.flash-down { animation: flash-down 0.7s ease-out; border-radius: 5px; }
+
+/* Respect reduced-motion for marquees + animations */
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track { animation: none !important; }
+  .flash-up, .flash-down { animation: none !important; }
+}

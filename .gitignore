@@ -1,0 +1,18 @@
+# dependencies / build output
+node_modules/
+web/.next/
+web/out/
+web/build/
+
+# env
+.env
+.env.local
+.env*.local
+
+# go (backend, added later)
+server/bin/
+*.exe
+
+# misc
+.DS_Store
+*.log

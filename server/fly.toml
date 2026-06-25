@@ -1,0 +1,23 @@
+# Fly.io config for the ChadWallet Go API.
+# `app` must be globally unique — change it, or let `fly launch` rename it.
+app = "chadwallet-api"
+primary_region = "iad"  # US-East, close to most Solana data providers + RPCs
+
+[build]
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_start_machines = true
+  auto_stop_machines = "stop"
+  # Keep 1 warm to avoid cold starts during the demo; set to 0 to save free hours.
+  min_machines_running = 1
+
+[env]
+  PORT = "8080"
+  # Overridden by `fly secrets set ALLOWED_ORIGIN=...` if you prefer.
+  ALLOWED_ORIGIN = "*"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
