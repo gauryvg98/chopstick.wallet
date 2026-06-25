@@ -31,6 +31,7 @@ export function PortfolioPositions({ owner }: { owner: string }) {
   const { price: solPriceRaw } = useLivePrice(SOL_MINT);
   const solPrice = solPriceRaw ?? 0;
   const deposited = activity?.deposited ?? 0;
+  const withdrawn = activity?.withdrawn ?? 0;
   const feesSol = activity?.feesSol ?? 0;
 
   const posByMint = useMemo(() => {
@@ -58,8 +59,8 @@ export function PortfolioPositions({ owner }: { owner: string }) {
   const totalValueSol = solBalance + tokenValueSol;
   const netSol = realizedSol + activeSol;
 
-  // Cost bases for the % returns: active = SOL paid for what's still held;
-  // realized = SOL cost of what was sold.
+  // Cost bases for the per-bucket % returns: active = SOL paid for what's still
+  // held; realized = SOL cost of what was sold.
   const activeCostSol = tokens.reduce((a, t) => {
     const p = posByMint.get(t.mint);
     return a + (p && p.avgEntrySol > 0 ? p.avgEntrySol * t.amount : 0);
@@ -70,7 +71,11 @@ export function PortfolioPositions({ owner }: { owner: string }) {
   );
   const pct = (num: number, den: number) =>
     den > 1e-9 ? (num / den) * 100 : undefined;
-  const netPct = pct(netSol, activeCostSol + realizedCostSol);
+  // Headline Net % is measured against NET CAPITAL FUNDED (deposited − withdrawn),
+  // matching the Net PnL $ figure (= portfolio value − deposited). Using the sum
+  // of cost bases here would double-count recycled capital (sell → rebuy), so it
+  // understated the real return on the money you put in.
+  const netPct = pct(netSol, deposited - withdrawn);
   const activePct = pct(activeSol, activeCostSol);
   const realizedPct = pct(realizedSol, realizedCostSol);
 
