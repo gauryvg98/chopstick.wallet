@@ -182,7 +182,7 @@ func (s *Server) handleOHLCV(w http.ResponseWriter, r *http.Request) {
 	// polling — the chart someone just opened shouldn't queue behind trending —
 	// and bound it so no chart request ever hangs behind a throttle backoff: on
 	// timeout we serve sampler-built candles instead of stalling the client.
-	ctx, cancel := context.WithTimeout(freedata.WithPriority(r.Context()), 8*time.Second)
+	ctx, cancel := context.WithTimeout(freedata.WithPriority(r.Context()), 10*time.Second)
 	defer cancel()
 	start := time.Now()
 	// The REST OHLCV is the *historical backbone*; the chart's live edge arrives
@@ -197,7 +197,7 @@ func (s *Server) handleOHLCV(w http.ResponseWriter, r *http.Request) {
 			switch {
 			case tf.SubMinute():
 				return 4 * time.Second
-			case len(d) < 20: // thin / fallback — don't freeze it
+			case len(d) < 40: // thin / sampler fallback — re-fetch soon, never freeze
 				return 6 * time.Second
 			default:
 				return 3 * time.Minute

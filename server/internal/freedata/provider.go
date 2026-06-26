@@ -410,7 +410,7 @@ func (p *Provider) OHLCV(ctx context.Context, mint string, tf types.Timeframe) (
 		// (Returning a thin "success" here would defeat that cache and, with its 6s
 		// TTL, hammer GT every 6s — keeping it throttled in a feedback loop.)
 		p.pl.watchMint(mint)
-		gctx, cancel := context.WithTimeout(ctx, 6*time.Second)
+		gctx, cancel := context.WithTimeout(ctx, 8*time.Second)
 		cs, e := p.gt.ohlcv(gctx, pool, tf)
 		cancel()
 		if e != nil {
