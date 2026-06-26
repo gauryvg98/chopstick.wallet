@@ -289,11 +289,13 @@ func main() {
 // pollTrending warms the trending + banner cache on an interval so user
 // requests are served from cache and never trigger an upstream call.
 func pollTrending(ctx context.Context, p *freedata.Provider, c *cache.Cache) {
-	refresh := func() {
+	refresh := func() bool {
 		tr, err := p.Trending(ctx)
-		if err != nil {
-			log.Printf("poller: trending refresh failed: %v", err)
-			return
+		if err != nil || len(tr) == 0 {
+			if err != nil {
+				log.Printf("poller: trending refresh failed: %v", err)
+			}
+			return false // empty counts as a miss — don't publish a blank tab
 		}
 		// Long TTL: these keys are served straight from this in-memory snapshot
 		// (handlers read via Snapshot, which never re-fetches), so the value must
@@ -308,8 +310,28 @@ func pollTrending(ctx context.Context, p *freedata.Provider, c *cache.Cache) {
 			banner = append(banner, t.Token)
 		}
 		c.Put("banner", banner, 10*time.Minute)
+		return true
 	}
-	refresh()
+	// On boot GeckoTerminal can be throttled, and there's no last-good snapshot to
+	// fall back on yet — so keep retrying on a short interval until trending
+	// populates (otherwise the tab sits empty for a full 150s cycle). Once it's
+	// populated, the Snapshot serves that set through any later transient failure.
+	if !refresh() {
+		warm := time.NewTicker(20 * time.Second)
+	bootstrap:
+		for {
+			select {
+			case <-ctx.Done():
+				warm.Stop()
+				return
+			case <-warm.C:
+				if refresh() {
+					break bootstrap
+				}
+			}
+		}
+		warm.Stop()
+	}
 	// Trending membership shifts over minutes; live prices ride the WS stream, not
 	// this poll — so a slow cadence leaves GeckoTerminal almost entirely free for
 	// the chart someone just opened (which jumps the queue at high priority anyway).
