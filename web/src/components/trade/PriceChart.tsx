@@ -112,9 +112,15 @@ export function PriceChart({
     setStreamed(true);
     const incoming = scaleBar({ time: raw.time, open: raw.open, high: raw.high, low: raw.low, close: raw.close });
     const last = lastBarRef.current;
-    // #2: within the SAME bucket, extend the existing candle (keep its open, widen
-    // high/low, move close) instead of letting the backend's flat forming bar
-    // replace it — otherwise the latest candle collapses to a line.
+    // The live stream (Jupiter, current minute) and the history (GeckoTerminal,
+    // which lags real-time by a few minutes) are different price sources, so the
+    // raw open of a new candle can jump at the seam. Resolve both cases against
+    // the previous candle's close:
+    //  #2a same bucket  → extend (keep open, widen high/low, move close) so the
+    //      forming candle doesn't collapse to a line.
+    //  #2b new bucket   → open AT the previous close, so the live edge stays
+    //      continuous with history (and across every rollover) instead of
+    //      teleporting to wherever the live source happens to price it.
     const bar =
       last && incoming.time === last.time
         ? {
@@ -122,6 +128,14 @@ export function PriceChart({
             open: last.open,
             high: Math.max(last.high, incoming.high),
             low: Math.min(last.low, incoming.low),
+            close: incoming.close,
+          }
+        : last
+        ? {
+            time: incoming.time,
+            open: last.close,
+            high: Math.max(incoming.high, last.close),
+            low: Math.min(incoming.low, last.close),
             close: incoming.close,
           }
         : incoming;
