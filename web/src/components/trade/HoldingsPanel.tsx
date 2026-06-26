@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
-import { useHoldings, useToken } from "@/lib/api/hooks";
+import { useHoldings, usePositions, useToken } from "@/lib/api/hooks";
 import { useLivePrice } from "@/lib/livePrices";
 import { TokenAvatar } from "@/components/ui/TokenAvatar";
-import { formatUsd, formatCompact, shortAddr } from "@/lib/format";
+import { formatUsd, formatCompact, formatSol, formatPct, shortAddr } from "@/lib/format";
+import { cn } from "@/lib/cn";
+import type { Position } from "@/lib/api/types";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
@@ -20,7 +22,15 @@ export function HoldingsPanel({ flat = false }: { flat?: boolean }) {
   const { authenticated, user } = useAuth();
   const owner = authenticated ? user?.address ?? null : null;
   const { data: holdings, isLoading } = useHoldings(owner);
+  const { data: positions } = usePositions(owner);
   const { price: solPrice } = useLivePrice(SOL_MINT);
+
+  // Chain-derived cost basis per mint, for the running (unrealized) PnL per row.
+  const posByMint = useMemo(() => {
+    const m = new Map<string, Position>();
+    (positions?.positions ?? []).forEach((p) => m.set(p.mint, p));
+    return m;
+  }, [positions]);
 
   // Token USD values live in the per-row components (each prices its own mint);
   // rows report up so we can show a portfolio total.
@@ -67,7 +77,14 @@ export function HoldingsPanel({ flat = false }: { flat?: boolean }) {
 
         {/* SPL tokens */}
         {tokens.map((t) => (
-          <HoldingRow key={t.mint} mint={t.mint} amount={t.amount} onValue={reportValue} />
+          <HoldingRow
+            key={t.mint}
+            mint={t.mint}
+            amount={t.amount}
+            solPrice={solPrice ?? 0}
+            avgEntrySol={posByMint.get(t.mint)?.avgEntrySol ?? 0}
+            onValue={reportValue}
+          />
         ))}
       </div>
 
@@ -85,16 +102,30 @@ export function HoldingsPanel({ flat = false }: { flat?: boolean }) {
 function HoldingRow({
   mint,
   amount,
+  solPrice,
+  avgEntrySol,
   onValue,
 }: {
   mint: string;
   amount: number;
+  solPrice: number;
+  avgEntrySol: number;
   onValue: (mint: string, usd: number) => void;
 }) {
   const { data: token } = useToken(mint);
   const { price: live } = useLivePrice(mint);
   const price = live && live > 0 ? live : token?.priceUsd ?? 0;
   const usd = amount * price;
+
+  // Running (unrealized) PnL vs the chain-derived cost basis, SOL-denominated so
+  // it isn't distorted by SOL/USD moves — shown as a % and the SOL gain/loss.
+  const tokenPriceSol = solPrice > 0 ? price / solPrice : 0;
+  const valueSol = amount * tokenPriceSol;
+  const hasCost = avgEntrySol > 0 && amount > 1e-9;
+  const costSol = avgEntrySol * amount;
+  const pnlSol = hasCost ? valueSol - costSol : 0;
+  const pnlPct = hasCost && costSol > 0 ? (pnlSol / costSol) * 100 : 0;
+  const up = pnlSol >= 0;
 
   useEffect(() => {
     onValue(mint, usd);
@@ -113,8 +144,18 @@ function HoldingRow({
         </div>
         <div className="text-xs text-muted tnum">{formatCompact(amount)} tokens</div>
       </div>
-      <div className="text-right text-sm font-semibold text-white tnum">
-        {usd > 0 ? formatUsd(usd) : "—"}
+      <div className="text-right shrink-0">
+        <div className="text-sm font-semibold text-white tnum">
+          {usd > 0 ? formatUsd(usd) : "—"}
+        </div>
+        {hasCost ? (
+          <div className={cn("text-[11px] tnum", up ? "text-up" : "text-down")}>
+            {up ? "▲" : "▼"} {formatPct(pnlPct)} · {up ? "+" : ""}
+            {formatSol(pnlSol)}
+          </div>
+        ) : (
+          <div className="text-[11px] text-faint">no entry</div>
+        )}
       </div>
     </Link>
   );
