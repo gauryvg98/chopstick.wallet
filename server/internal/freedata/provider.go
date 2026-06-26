@@ -255,6 +255,24 @@ func (p *Provider) RefreshBig(ctx context.Context) {
 	curated, _ := p.gt.curatedBig(ctx)
 	pools, _ := p.gt.bigPools(ctx)
 
+	// curatedBig's GeckoTerminal source lacks price-change %, so the blue-chips
+	// render a flat 0.00%. Backfill 24h/1h change from DexScreener (one batch
+	// call) where available.
+	if len(curated) > 0 {
+		mints := make([]string, 0, len(curated))
+		for _, t := range curated {
+			mints = append(mints, t.Address)
+		}
+		if ch := p.dex.changes(ctx, mints); len(ch) > 0 {
+			for i := range curated {
+				if c, ok := ch[curated[i].Address]; ok {
+					curated[i].Change24h = c[0]
+					curated[i].Change1h = c[1]
+				}
+			}
+		}
+	}
+
 	p.bigMu.Lock()
 	defer p.bigMu.Unlock()
 	seen := map[string]bool{}

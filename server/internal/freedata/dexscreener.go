@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"chadwallet/server/internal/types"
@@ -45,6 +46,41 @@ type dexPair struct {
 	Info struct {
 		ImageURL string `json:"imageUrl"`
 	} `json:"info"`
+}
+
+// changes returns 24h/1h price-change % for a batch of mints, keyed by mint
+// (the most-liquid Solana pair wins per mint). DexScreener's multi-token endpoint
+// carries priceChange, which GeckoTerminal's /tokens/multi omits — so the BIG
+// list's blue-chips would otherwise show a flat 0.00%. One call backfills them.
+func (c *dexClient) changes(ctx context.Context, mints []string) map[string][2]float64 {
+	out := map[string][2]float64{}
+	// DexScreener accepts up to 30 comma-separated addresses per call.
+	for start := 0; start < len(mints); start += 30 {
+		end := start + 30
+		if end > len(mints) {
+			end = len(mints)
+		}
+		var r struct {
+			Pairs []dexPair `json:"pairs"`
+		}
+		url := "https://api.dexscreener.com/latest/dex/tokens/" + strings.Join(mints[start:end], ",")
+		if err := getJSON(ctx, c.hc, c.lim, url, &r); err != nil {
+			continue
+		}
+		bestLiq := map[string]float64{}
+		for i := range r.Pairs {
+			p := &r.Pairs[i]
+			if p.ChainID != "solana" || p.BaseToken.Address == "" {
+				continue
+			}
+			m := p.BaseToken.Address
+			if cur, ok := bestLiq[m]; !ok || p.Liquidity.Usd > cur {
+				bestLiq[m] = p.Liquidity.Usd
+				out[m] = [2]float64{p.PriceChange.H24, p.PriceChange.H1}
+			}
+		}
+	}
+	return out
 }
 
 // token returns the token detail + its most-liquid pool address.
