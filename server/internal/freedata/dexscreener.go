@@ -54,9 +54,12 @@ type dexPair struct {
 // list's blue-chips would otherwise show a flat 0.00%. One call backfills them.
 func (c *dexClient) changes(ctx context.Context, mints []string) map[string][2]float64 {
 	out := map[string][2]float64{}
-	// DexScreener accepts up to 30 comma-separated addresses per call.
-	for start := 0; start < len(mints); start += 30 {
-		end := start + 30
+	// DexScreener's multi-token response is capped at ~30 pairs total, so a large
+	// batch starves the lower-liquidity mints (their top pair falls past the cut).
+	// Keep chunks small so every mint's most-liquid pair is in the response.
+	const chunk = 5
+	for start := 0; start < len(mints); start += chunk {
+		end := start + chunk
 		if end > len(mints) {
 			end = len(mints)
 		}
