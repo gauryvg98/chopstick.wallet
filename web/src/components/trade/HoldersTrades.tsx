@@ -35,33 +35,80 @@ function TradesEmpty({ token }: { token: TokenDetail }) {
   );
 }
 
+/** Deterministic gradient avatar from a wallet address (stand-in for the social
+ *  profile pics fomo shows — we only have on-chain addresses). */
+function AddrAvatar({ addr, size = 26 }: { addr: string; size?: number }) {
+  let h = 0;
+  for (let i = 0; i < addr.length; i++) h = (h * 31 + addr.charCodeAt(i)) >>> 0;
+  const a = h % 360;
+  const b = (a + 70) % 360;
+  return (
+    <div
+      className="shrink-0 rounded-full ring-1 ring-white/10"
+      style={{
+        width: size,
+        height: size,
+        background: `linear-gradient(135deg, hsl(${a} 68% 55%), hsl(${b} 68% 42%))`,
+      }}
+    />
+  );
+}
+
+function ColHead({ cols }: { cols: [string, string][] }) {
+  return (
+    <div className="sticky top-0 z-10 grid grid-cols-[1fr_64px_92px_44px] gap-3 px-4 py-2 bg-ink/95 backdrop-blur border-b border-line text-[11px] uppercase tracking-wide text-faint">
+      {cols.map(([label, align]) => (
+        <span key={label} className={align}>
+          {label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function TradesTab({ token }: { token: TokenDetail }) {
   const { data } = useTrades(token.address);
   if (!data) return <ListSkeleton />;
   if (data.length === 0) return <TradesEmpty token={token} />;
   return (
-    <div className="divide-y divide-line/60">
-      {data.map((t) => (
-        <div key={t.id} className="flex items-center gap-3 px-4 py-2 text-sm">
-          <span
-            className={cn(
-              "w-12 shrink-0 font-bold uppercase text-xs",
-              t.side === "buy" ? "text-up" : "text-down"
-            )}
+    <div>
+      <ColHead
+        cols={[
+          ["Trader", "text-left"],
+          ["Action", "text-center"],
+          ["Amount", "text-right"],
+          ["Time", "text-right"],
+        ]}
+      />
+      <div className="divide-y divide-line/50">
+        {data.map((t) => (
+          <div
+            key={t.id}
+            className="grid grid-cols-[1fr_64px_92px_44px] items-center gap-3 px-4 py-2 text-sm hover:bg-white/5 transition-colors"
           >
-            {t.side}
-          </span>
-          <span className="flex-1 min-w-0 truncate text-white">
-            {t.traderLabel ?? shortAddr(t.trader, 4, 4)}
-          </span>
-          <span className="tnum text-white shrink-0">
-            {formatCompactUsd(t.amountUsd)}
-          </span>
-          <span className="tnum text-faint w-10 text-right shrink-0">
-            {timeAgo(t.timestamp)}
-          </span>
-        </div>
-      ))}
+            <div className="flex items-center gap-2 min-w-0">
+              <AddrAvatar addr={t.trader} />
+              <span className="truncate text-white">
+                {t.traderLabel ?? shortAddr(t.trader, 4, 4)}
+              </span>
+            </div>
+            <span
+              className={cn(
+                "justify-self-center inline-flex items-center justify-center rounded-md px-2 h-6 text-[11px] font-bold uppercase",
+                t.side === "buy" ? "bg-up/15 text-up" : "bg-down/15 text-down"
+              )}
+            >
+              {t.side}
+            </span>
+            <span className="tnum text-white text-right">
+              {formatCompactUsd(t.amountUsd)}
+            </span>
+            <span className="tnum text-faint text-right">
+              {timeAgo(t.timestamp)}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -70,29 +117,43 @@ function HoldersTab({ token }: { token: TokenDetail }) {
   const { data } = useHolders(token.address);
   if (!data) return <ListSkeleton />;
   return (
-    <div className="divide-y divide-line/60">
-      {data.map((h) => (
-        <div key={h.address} className="flex items-center gap-3 px-4 py-2 text-sm">
-          <span className="w-6 shrink-0 text-xs text-faint tnum">#{h.rank}</span>
-          <span className="flex-1 min-w-0 truncate text-white tnum">
-            {shortAddr(h.address, 4, 4)}
-          </span>
-          <div className="w-24 hidden sm:block">
-            <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
-              <div
-                className="h-full bg-chad/70"
-                style={{ width: `${Math.min(100, h.pct * 4)}%` }}
-              />
+    <div>
+      <ColHead
+        cols={[
+          ["Holder", "text-left"],
+          ["Share", "text-center"],
+          ["% held", "text-right"],
+          ["Value", "text-right"],
+        ]}
+      />
+      <div className="divide-y divide-line/50">
+        {data.map((h) => (
+          <div
+            key={h.address}
+            className="grid grid-cols-[1fr_64px_92px_44px] items-center gap-3 px-4 py-2 text-sm hover:bg-white/5 transition-colors"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-5 shrink-0 text-xs text-faint tnum">{h.rank}</span>
+              <AddrAvatar addr={h.address} />
+              <span className="truncate text-white tnum">
+                {shortAddr(h.address, 4, 4)}
+              </span>
             </div>
+            <div className="justify-self-center w-14">
+              <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
+                <div
+                  className="h-full bg-chad/70"
+                  style={{ width: `${Math.min(100, h.pct * 4)}%` }}
+                />
+              </div>
+            </div>
+            <span className="tnum text-white text-right">{h.pct.toFixed(2)}%</span>
+            <span className="tnum text-muted text-right">
+              {formatCompactUsd(h.valueUsd)}
+            </span>
           </div>
-          <span className="tnum text-white w-12 text-right shrink-0">
-            {h.pct.toFixed(2)}%
-          </span>
-          <span className="tnum text-muted w-20 text-right shrink-0 hidden sm:block">
-            {formatCompactUsd(h.valueUsd)}
-          </span>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }

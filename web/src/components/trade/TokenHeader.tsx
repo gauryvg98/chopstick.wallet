@@ -8,11 +8,22 @@ import { useSpotlight } from "@/components/TokenSpotlight";
 import { LivePrice, useLivePrice } from "@/lib/livePrices";
 import { formatCompactUsd, formatCompact, shortAddr } from "@/lib/format";
 
-function Stat({ label, value }: { label: string; value: string }) {
+/** fomo-style bordered stat box: tiny uppercase label over a tnum value. */
+function StatBox({
+  label,
+  value,
+  children,
+}: {
+  label: string;
+  value?: string;
+  children?: React.ReactNode;
+}) {
   return (
-    <div className="min-w-0">
-      <div className="text-[11px] uppercase tracking-wide text-faint">{label}</div>
-      <div className="text-sm font-semibold text-white truncate tnum">{value}</div>
+    <div className="shrink-0 rounded-xl border border-line bg-surface/40 px-3 py-1.5 min-w-[88px]">
+      <div className="text-[10px] uppercase tracking-wide text-faint">{label}</div>
+      <div className="mt-0.5 text-sm font-semibold text-white tnum truncate">
+        {children ?? value}
+      </div>
     </div>
   );
 }
@@ -64,14 +75,21 @@ export function TokenHeader({ address }: { address: string }) {
     );
   }
 
+  const top10 = (
+    holders && holders.length
+      ? holders.slice(0, 10).reduce((a, h) => a + h.pct, 0)
+      : t.top10Pct
+  ).toFixed(1);
+
   return (
-    <div className="p-4 border-b border-line">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-3">
+    <div className="p-3 border-b border-line">
+      <div className="flex items-center gap-3">
+        {/* identity */}
+        <div className="flex items-center gap-2.5 shrink-0">
           <TokenAvatar
             symbol={t.symbol}
             logoURI={t.logoURI}
-            size={48}
+            size={40}
             onClick={() =>
               openSpotlight({
                 address: t.address,
@@ -84,56 +102,48 @@ export function TokenHeader({ address }: { address: string }) {
               })
             }
           />
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-white leading-tight">
+              <h1 className="text-lg font-bold text-white leading-tight">
                 {t.symbol}
               </h1>
-              <button
-                onClick={() => {
-                  navigator.clipboard?.writeText(t.address);
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 1200);
-                }}
-                className="text-xs text-muted hover:text-white inline-flex items-center gap-1 rounded-md bg-surface-2 border border-line px-1.5 py-0.5"
-              >
-                {copied ? "Copied!" : shortAddr(t.address, 4, 4)}
-              </button>
+              <span className="text-sm text-muted truncate max-w-[120px]">
+                {t.name}
+              </span>
               {t.bondingCurve && (
                 <span className="text-[10px] font-bold uppercase tracking-wide rounded-md bg-chad/15 text-chad px-1.5 py-0.5">
-                  🌱 Bonding curve
+                  🌱
                 </span>
               )}
             </div>
-            <div className="text-sm text-muted">{t.name}</div>
+            <button
+              onClick={() => {
+                navigator.clipboard?.writeText(t.address);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1200);
+              }}
+              className="mt-0.5 text-[11px] font-mono text-faint hover:text-white inline-flex items-center gap-1"
+            >
+              {copied ? "Copied!" : shortAddr(t.address, 4, 4)}
+              <span className="text-[10px]">⧉</span>
+            </button>
           </div>
         </div>
 
-        <div className="text-right">
-          <div className="text-2xl sm:text-3xl font-bold text-white tnum leading-none">
-            {formatCompactUsd(liveMarketCap)}
-          </div>
-          <div className="text-xs text-faint mt-1">Market cap</div>
+        {/* fomo-style stat boxes — scroll horizontally when they overflow */}
+        <div className="flex items-center gap-2 overflow-x-auto scroll-thin flex-1 min-w-0 pb-0.5">
+          <StatBox label="Market cap" value={formatCompactUsd(liveMarketCap)} />
+          <StatBox label="Price">
+            <LivePrice mint={t.address} fallback={t.priceUsd} className="text-sm font-semibold text-white" />
+          </StatBox>
+          <StatBox label="24H change">
+            <ChangeText value={t.change24h} className="text-sm" />
+          </StatBox>
+          <StatBox label="24H Vol" value={formatCompactUsd(t.volume24h)} />
+          <StatBox label="Liquidity" value={formatCompactUsd(t.liquidity)} />
+          <StatBox label="Holders" value={formatCompact(t.holderCount)} />
+          <StatBox label="Top 10" value={`${top10}%`} />
         </div>
-      </div>
-
-      <div className="mt-3 flex items-center gap-3">
-        <LivePrice mint={t.address} fallback={t.priceUsd} className="text-lg font-semibold text-white" />
-        <ChangeText value={t.change24h} />
-        <span className="text-xs text-faint">24h</span>
-      </div>
-
-      <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Stat label="Liquidity" value={formatCompactUsd(t.liquidity)} />
-        <Stat label="Volume 24h" value={formatCompactUsd(t.volume24h)} />
-        <Stat label="Holders" value={formatCompact(t.holderCount)} />
-        <Stat
-          label="Top 10"
-          value={`${(holders && holders.length
-            ? holders.slice(0, 10).reduce((a, h) => a + h.pct, 0)
-            : t.top10Pct
-          ).toFixed(1)}%`}
-        />
       </div>
 
       {t.bondingCurve && <GraduationBar marketCap={t.marketCap} />}

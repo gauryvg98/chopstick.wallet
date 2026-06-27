@@ -7,6 +7,7 @@ import { getClient } from "@/lib/api/index";
 import type { WalletHoldings } from "@/lib/api/types";
 import { useAuth } from "@/lib/auth";
 import { HoldingsPanel } from "./HoldingsPanel";
+import { TokenAbout } from "./TokenAbout";
 import { useLivePrice } from "@/lib/livePrices";
 import { useSwap, SOL_MINT } from "@/lib/swap";
 import { Button } from "@/components/ui/Button";
@@ -473,6 +474,9 @@ export function TradePanel({ address }: { address: string }) {
             )}
           </div>
         )}
+
+        {/* About + live buy/sell activity (fomo-style) */}
+        <TokenAbout address={address} />
 
         {/* Position */}
         {hasPosition && token ? (
