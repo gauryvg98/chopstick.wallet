@@ -8,6 +8,7 @@ import type { WalletHoldings } from "@/lib/api/types";
 import { useAuth } from "@/lib/auth";
 import { HoldingsPanel } from "./HoldingsPanel";
 import { TokenAbout } from "./TokenAbout";
+import { TradePositions } from "./TradePositions";
 import { useLivePrice } from "@/lib/livePrices";
 import { useSwap, SOL_MINT } from "@/lib/swap";
 import { Button } from "@/components/ui/Button";
@@ -554,6 +555,9 @@ export function TradePanel({ address }: { address: string }) {
             </p>
           </div>
         )}
+
+        {/* Open / closed positions across the wallet (fomo's bottom panel). */}
+        <TradePositions />
 
         {/* Full on-chain wallet — SOL + every token, live USD values. */}
         <HoldingsPanel />
