@@ -27,6 +27,7 @@ export interface SwapParams {
 export interface SwapResult {
   signature?: string;
   error?: string;
+  cancelled?: boolean;
 }
 
 function base64ToBytes(b64: string): Uint8Array {
@@ -158,6 +159,13 @@ export function useSwap() {
       } catch (e) {
         const msg =
           e instanceof Error ? e.message : "Swap failed — please try again";
+        // Closing the Privy signing prompt rejects the sign — that's a cancel,
+        // not a failure. Quietly reset instead of flashing a scary error.
+        if (/reject|declin|denied|cancel|dismiss|user.?(closed|rejected)/i.test(msg)) {
+          setStage("idle");
+          setError(null);
+          return { cancelled: true };
+        }
         setStage("error");
         setError(msg);
         return { error: msg };
