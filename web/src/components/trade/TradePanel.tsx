@@ -2,18 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSWRConfig } from "swr";
-import { useToken, useHoldings, usePositions } from "@/lib/api/hooks";
+import { useToken, useHoldings, usePositions, useActivity } from "@/lib/api/hooks";
 import { getClient } from "@/lib/api/index";
 import type { WalletHoldings } from "@/lib/api/types";
 import { useAuth } from "@/lib/auth";
 import { HoldingsPanel } from "./HoldingsPanel";
 import { TokenAbout } from "./TokenAbout";
-import { TradePositions } from "./TradePositions";
 import { useLivePrice } from "@/lib/livePrices";
 import { useSwap, SOL_MINT } from "@/lib/swap";
 import { Button } from "@/components/ui/Button";
 import { PriceText } from "@/components/ui/PriceText";
-import { formatUsd, formatCompact, formatPct, formatSol } from "@/lib/format";
+import { formatUsd, formatCompact, formatPct, formatSol, timeAgo } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
 type Side = "buy" | "sell";
@@ -67,6 +66,7 @@ export function TradePanel({ address }: { address: string }) {
     swapStage === "confirming";
 
   const [side, setSide] = useState<Side>("buy");
+  const [posTab, setPosTab] = useState<"open" | "closed">("open");
   const [usd, setUsd] = useState<string>("");
   const [buyDenom, setBuyDenom] = useState<"sol" | "usd">("sol");
   const [sellPct, setSellPct] = useState<number>(0);
@@ -77,10 +77,57 @@ export function TradePanel({ address }: { address: string }) {
   // On-chain wallet (read via RPC) once signed in.
   const owner = authenticated ? user?.address ?? null : null;
   const { data: holdings } = useHoldings(owner);
+  // Wallet swap history (cached wallet-wide under ["activity", owner]); filtered
+  // in memory to THIS token's buys/sells — the swaps that make up the position.
+  const { data: activity } = useActivity(owner);
+  const tokenTrades = (activity?.items ?? []).filter(
+    (it) => it.mint === address && (it.kind === "buy" || it.kind === "sell")
+  );
 
   // Live price drives value + PnL, so the position ticks in real time.
   const price = livePrice && livePrice > 0 ? livePrice : token?.priceUsd ?? 0;
   const sym = token?.symbol ?? "";
+
+  // The individual swaps backing this position — only rendered inside a branch
+  // that actually HAS a position (open holding / closed trade), so an empty
+  // wallet never shows a stray trade list.
+  const tradesBlock =
+    tokenTrades.length > 0 ? (
+      <div className="mt-3 pt-3 border-t border-line/60">
+        <div className="text-[11px] uppercase tracking-wide text-faint mb-1.5">
+          Your {sym} trades · {tokenTrades.length}
+        </div>
+        <div className="space-y-0.5 max-h-44 overflow-y-auto scroll-thin -mx-1">
+          {tokenTrades.map((tr) => (
+            <a
+              key={tr.signature}
+              href={`https://solscan.io/tx/${tr.signature}`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-2 rounded-md px-1 py-1.5 text-xs hover:bg-white/5 transition-colors"
+            >
+              <span
+                className={cn(
+                  "w-9 shrink-0 font-bold uppercase",
+                  tr.kind === "buy" ? "text-up" : "text-down"
+                )}
+              >
+                {tr.kind}
+              </span>
+              <span className="flex-1 min-w-0 truncate text-white tnum">
+                {formatCompact(tr.tokenAmount ?? 0)} {sym}
+              </span>
+              <span className="shrink-0 text-muted tnum">
+                {formatSol(tr.solAmount)}
+              </span>
+              <span className="w-10 shrink-0 text-right text-faint tnum">
+                {timeAgo(tr.timestamp * 1000)}
+              </span>
+            </a>
+          ))}
+        </div>
+      </div>
+    ) : null;
 
   // Holdings + cost basis both come from the CHAIN — no DB. avgEntrySol is the
   // average SOL paid per token (reconstructed from swap history); PnL is computed
@@ -93,6 +140,7 @@ export function TradePanel({ address }: { address: string }) {
 
   const avgEntrySol = position?.avgEntrySol ?? 0;
   const realizedSol = position?.realizedSol ?? 0;
+  const realizedCostSol = position?.realizedCostSol ?? 0;
   const tokenPriceSol = solPrice && solPrice > 0 ? price / solPrice : 0;
   const costSol = avgEntrySol * heldAmount; // SOL paid for what's still held
   const valueSol = heldAmount * tokenPriceSol;
@@ -479,85 +527,134 @@ export function TradePanel({ address }: { address: string }) {
         {/* About + live buy/sell activity (fomo-style) */}
         <TokenAbout address={address} />
 
-        {/* Position */}
-        {hasPosition && token ? (
-          <div className="rounded-2xl bg-surface/60 border border-line p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-white">Your position</span>
-              <span className="text-[10px] font-bold uppercase tracking-wide rounded-md bg-surface-2 text-faint px-1.5 py-0.5">
-                On-chain
-              </span>
+        {/* Your position in THIS token — Open (current holding, unrealized) /
+            Closed (realized PnL from past trades on this token). Scoped to the
+            token on screen; the wallet-wide view lives on the portfolio page. */}
+        <div className="rounded-2xl bg-surface/60 border border-line p-4">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm font-bold text-white">Your position</span>
+            <div className="flex gap-0.5 rounded-lg bg-surface-2 border border-line p-0.5">
+              {(["open", "closed"] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setPosTab(t)}
+                  className={cn(
+                    "px-2.5 h-6 rounded-md text-[11px] font-bold uppercase transition-colors",
+                    posTab === t ? "bg-chad text-ink" : "text-muted hover:text-white"
+                  )}
+                >
+                  {t}
+                </button>
+              ))}
             </div>
-            <div className="mt-1.5 flex items-end justify-between gap-2">
-              <span className="text-3xl font-bold text-white tnum leading-none">
-                {formatUsd(valueUsd)}
-              </span>
-              {hasCost && (
+          </div>
+
+          {posTab === "open" ? (
+            hasPosition && token ? (
+              <>
+                <div className="mt-2 flex items-end justify-between gap-2">
+                  <span className="text-3xl font-bold text-white tnum leading-none">
+                    {formatUsd(valueUsd)}
+                  </span>
+                  {hasCost && (
+                    <span
+                      className={cn(
+                        "text-xs font-bold px-2 py-0.5 rounded-md",
+                        unrealizedSol >= 0 ? "bg-up/15 text-up" : "bg-down/15 text-down"
+                      )}
+                    >
+                      {unrealizedSol >= 0 ? "▲" : "▼"} {formatPct(pnlPct)}
+                    </span>
+                  )}
+                </div>
+                {hasCost ? (
+                  <div
+                    className={cn(
+                      "mt-1 text-sm font-semibold",
+                      unrealizedSol >= 0 ? "text-up" : "text-down"
+                    )}
+                  >
+                    {unrealizedSol >= 0 ? "+" : ""}
+                    {formatSol(unrealizedSol)}{" "}
+                    <span className="text-faint font-normal">
+                      ({unrealizedUsd >= 0 ? "+" : ""}
+                      {formatUsd(unrealizedUsd)}) unrealized
+                    </span>
+                  </div>
+                ) : (
+                  <div className="mt-1 text-xs text-faint">
+                    Cost basis loads from your swap history…
+                  </div>
+                )}
+                <div className="mt-3 pt-3 border-t border-line/60 space-y-2 text-sm">
+                  <Row label="Amount">
+                    {formatCompact(heldAmount)} {sym}
+                  </Row>
+                  {hasCost && (
+                    <>
+                      <Row label="Cost basis">{formatSol(costSol)}</Row>
+                      <Row label="Value">{formatSol(valueSol)}</Row>
+                    </>
+                  )}
+                  <Row label="Current price">
+                    <PriceText value={price} />
+                  </Row>
+                </div>
+                {tradesBlock}
+              </>
+            ) : (
+              <p className="mt-3 text-sm text-faint text-center">
+                {authenticated
+                  ? `No ${sym || "token"} in your wallet yet.`
+                  : `Sign in to load your ${sym || "token"} position.`}
+              </p>
+            )
+          ) : Math.abs(realizedSol) > 1e-9 || realizedCostSol > 1e-9 ? (
+            <>
+              <div className="mt-2 flex items-end justify-between gap-2">
+                <span
+                  className={cn(
+                    "text-3xl font-bold tnum leading-none",
+                    realizedSol >= 0 ? "text-up" : "text-down"
+                  )}
+                >
+                  {realizedSol >= 0 ? "+" : ""}
+                  {formatUsd(realizedSol * (solPrice ?? 0))}
+                </span>
                 <span
                   className={cn(
                     "text-xs font-bold px-2 py-0.5 rounded-md",
-                    unrealizedSol >= 0 ? "bg-up/15 text-up" : "bg-down/15 text-down"
+                    realizedSol >= 0 ? "bg-up/15 text-up" : "bg-down/15 text-down"
                   )}
                 >
-                  {unrealizedSol >= 0 ? "▲" : "▼"} {formatPct(pnlPct)}
+                  {realizedSol >= 0 ? "▲" : "▼"}{" "}
+                  {formatPct(realizedCostSol > 0 ? (realizedSol / realizedCostSol) * 100 : 0)}
                 </span>
-              )}
-            </div>
-            {hasCost ? (
+              </div>
               <div
                 className={cn(
                   "mt-1 text-sm font-semibold",
-                  unrealizedSol >= 0 ? "text-up" : "text-down"
+                  realizedSol >= 0 ? "text-up" : "text-down"
                 )}
               >
-                {unrealizedSol >= 0 ? "+" : ""}
-                {formatSol(unrealizedSol)}{" "}
-                <span className="text-faint font-normal">
-                  ({unrealizedUsd >= 0 ? "+" : ""}
-                  {formatUsd(unrealizedUsd)}) unrealized
-                </span>
+                {realizedSol >= 0 ? "+" : ""}
+                {formatSol(realizedSol)}{" "}
+                <span className="text-faint font-normal">realized on {sym}</span>
               </div>
-            ) : (
-              <div className="mt-1 text-xs text-faint">
-                Cost basis loads from your swap history…
-              </div>
-            )}
-            <div className="mt-3 pt-3 border-t border-line/60 space-y-2 text-sm">
-              <Row label="Amount">
-                {formatCompact(heldAmount)} {sym}
-              </Row>
-              {hasCost && (
-                <>
-                  <Row label="Cost basis">{formatSol(costSol)}</Row>
-                  <Row label="Value">{formatSol(valueSol)}</Row>
-                </>
-              )}
-              {Math.abs(realizedSol) > 1e-9 && (
-                <Row label="Realized">
-                  <span className={realizedSol >= 0 ? "text-up" : "text-down"}>
-                    {realizedSol >= 0 ? "+" : ""}
-                    {formatSol(realizedSol)}
-                  </span>
+              <div className="mt-3 pt-3 border-t border-line/60 space-y-2 text-sm">
+                <Row label="Cost of sold">{formatSol(realizedCostSol)}</Row>
+                <Row label="Status">
+                  {hasPosition ? "Partially closed" : "Fully closed"}
                 </Row>
-              )}
-              <Row label="Current price">
-                <PriceText value={price} />
-              </Row>
-            </div>
-          </div>
-        ) : (
-          <div className="rounded-2xl bg-surface/40 border border-line p-4 text-center">
-            <div className="text-sm font-bold text-white">Your position</div>
-            <p className="mt-1 text-sm text-faint">
-              {authenticated
-                ? `No ${sym || "token"} in your wallet yet.`
-                : `Sign in to load your on-chain ${sym || "token"} holdings.`}
+              </div>
+              {tradesBlock}
+            </>
+          ) : (
+            <p className="mt-3 text-sm text-faint text-center">
+              No closed {sym || "token"} trades yet.
             </p>
-          </div>
-        )}
-
-        {/* Open / closed positions across the wallet (fomo's bottom panel). */}
-        <TradePositions />
+          )}
+        </div>
 
         {/* Full on-chain wallet — SOL + every token, live USD values. */}
         <HoldingsPanel />

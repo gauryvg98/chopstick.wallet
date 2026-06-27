@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { TradeHeader } from "@/components/trade/TradeHeader";
-import { TradeSidebar } from "@/components/trade/TradeSidebar";
+import { TradeGrid } from "@/components/trade/TradeGrid";
 import { ActiveTokenProvider } from "@/lib/activeToken";
+import { SidebarProvider } from "@/lib/tradeSidebar";
 
 export const metadata: Metadata = {
   title: "Trade",
@@ -18,17 +19,13 @@ export default function TradeLayout({
     // workspace instantly (URL syncs in the background) — shared by the sidebar
     // and the page below.
     <ActiveTokenProvider>
-      <div className="flex h-[100dvh] flex-col bg-ink overflow-hidden">
-        <TradeHeader />
-        <div className="flex-1 min-h-0 lg:grid lg:grid-cols-[300px_minmax(0,1fr)]">
-          {/* Persistent left column — lives in the layout, so it does NOT remount
-              when you click between tokens (scroll, tab, live state all survive). */}
-          <aside className="hidden lg:block h-full min-h-0">
-            <TradeSidebar />
-          </aside>
-          <div className="min-h-0 h-full">{children}</div>
+      <SidebarProvider>
+        <div className="flex h-[100dvh] flex-col bg-ink overflow-hidden">
+          <TradeHeader />
+          {/* Collapsible left panel + workspace that resizes to fill it. */}
+          <TradeGrid>{children}</TradeGrid>
         </div>
-      </div>
+      </SidebarProvider>
     </ActiveTokenProvider>
   );
 }

@@ -184,6 +184,7 @@ const KIND: Record<
 function ActivityRow({ item, solPrice }: { item: ActivityItem; solPrice: number }) {
   const isToken = !!item.mint;
   const { data: token } = useToken(isToken ? item.mint! : null);
+  const { open: openSpotlight } = useSpotlight();
   const k = KIND[item.kind];
   const sym = token?.symbol ?? (item.mint ? shortAddr(item.mint, 3, 3) : "");
   const color = k.up ? "text-up" : "text-down";
@@ -196,7 +197,25 @@ function ActivityRow({ item, solPrice }: { item: ActivityItem; solPrice: number 
       className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 transition-colors"
     >
       {isToken ? (
-        <TokenAvatar symbol={sym} logoURI={token?.logoURI} size={32} />
+        <TokenAvatar
+          symbol={sym}
+          logoURI={token?.logoURI}
+          size={32}
+          onClick={(e) => {
+            // Open the token spotlight instead of following the tx link.
+            e.preventDefault();
+            e.stopPropagation();
+            openSpotlight({
+              address: item.mint!,
+              symbol: sym,
+              name: token?.name ?? "",
+              logoURI: token?.logoURI ?? null,
+              priceUsd: token?.priceUsd ?? 0,
+              marketCap: token?.marketCap ?? 0,
+              change24h: token?.change24h ?? 0,
+            });
+          }}
+        />
       ) : (
         <div className="h-8 w-8 rounded-full bg-gradient-to-br from-chad to-teal grid place-items-center text-ink text-sm font-bold shrink-0">
           ◎

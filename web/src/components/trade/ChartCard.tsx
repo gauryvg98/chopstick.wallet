@@ -95,6 +95,7 @@ export function ChartCard({
           kind={kind}
           metric={metric}
           supply={token?.totalSupply ?? 0}
+          symbol={token?.symbol ?? ""}
         />
       </div>
     </div>

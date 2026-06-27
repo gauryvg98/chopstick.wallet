@@ -35,11 +35,16 @@ function TradesEmpty({ token }: { token: TokenDetail }) {
   );
 }
 
+function hashStr(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+
 /** Deterministic gradient avatar from a wallet address (stand-in for the social
  *  profile pics fomo shows — we only have on-chain addresses). */
 function AddrAvatar({ addr, size = 26 }: { addr: string; size?: number }) {
-  let h = 0;
-  for (let i = 0; i < addr.length; i++) h = (h * 31 + addr.charCodeAt(i)) >>> 0;
+  const h = hashStr(addr);
   const a = h % 360;
   const b = (a + 70) % 360;
   return (
@@ -52,6 +57,36 @@ function AddrAvatar({ addr, size = 26 }: { addr: string; size?: number }) {
       }}
     />
   );
+}
+
+// --- SAMPLE (illustrative) holder data ---------------------------------------
+// fomo shows each holder's display name + PnL + avg entry, sourced from accounts
+// and a swap indexer we don't run. We can't get per-wallet cost basis for an
+// arbitrary holder, so these are DETERMINISTICALLY GENERATED from the address
+// purely for the demo — clearly flagged "sample" in the UI. Real % held + value
+// remain authoritative on-chain data.
+const SAMPLE_ADJ = ["Silent", "Based", "Giga", "Degen", "Diamond", "Lucky", "Turbo", "Mega", "Stealth", "Frosty", "Crimson", "Golden", "Solar", "Cosmic", "Rapid", "Iron", "Quiet", "Wild"];
+const SAMPLE_NOUN = ["Otter", "Chad", "Whale", "Ape", "Bull", "Falcon", "Yeti", "Kraken", "Phoenix", "Ronin", "Wizard", "Samurai", "Nomad", "Tiger", "Comet", "Viper", "Hodler", "Maxi"];
+
+function sampleName(addr: string): string {
+  const h = hashStr(addr);
+  // NB: unsigned shift (>>>). A signed >> goes negative when the top bit is set,
+  // and SAMPLE_NOUN[negative] is undefined.
+  return `${SAMPLE_ADJ[h % SAMPLE_ADJ.length]}${SAMPLE_NOUN[(h >>> 5) % SAMPLE_NOUN.length]}`;
+}
+
+/** Generated, stable-per-address PnL% (skewed positive, as holders tend to be). */
+function samplePnlPct(addr: string): number {
+  const h = hashStr(addr + "pnl");
+  return Math.round(((h % 2100) / 10 - 28) * 100) / 100; // ≈ -28% .. +182%
+}
+
+/** Generated avg-hold label, e.g. "2d 14h". */
+function sampleHold(addr: string): string {
+  const h = hashStr(addr + "hold");
+  const d = h % 21;
+  const hr = (h >>> 4) % 24;
+  return d > 0 ? `${d}d ${hr}h` : `${hr}h ${(h >>> 8) % 60}m`;
 }
 
 function ColHead({ cols }: { cols: [string, string][] }) {
@@ -87,10 +122,17 @@ function TradesTab({ token }: { token: TokenDetail }) {
             className="grid grid-cols-[1fr_64px_92px_44px] items-center gap-3 px-4 py-2 text-sm hover:bg-white/5 transition-colors"
           >
             <div className="flex items-center gap-2 min-w-0">
-              <AddrAvatar addr={t.trader} />
-              <span className="truncate text-white">
-                {t.traderLabel ?? shortAddr(t.trader, 4, 4)}
-              </span>
+              <AddrAvatar addr={t.trader} size={30} />
+              <div className="min-w-0 leading-tight">
+                {/* real on-chain label if present, else a generated alias —
+                    the real wallet stays visible below either way. */}
+                <div className="truncate text-white font-medium">
+                  {t.traderLabel ?? sampleName(t.trader)}
+                </div>
+                <div className="text-[10px] text-faint tnum">
+                  {shortAddr(t.trader, 4, 4)}
+                </div>
+              </div>
             </div>
             <span
               className={cn(
@@ -113,46 +155,82 @@ function TradesTab({ token }: { token: TokenDetail }) {
   );
 }
 
+const HOLDER_GRID = "grid grid-cols-[minmax(0,1.5fr)_84px_minmax(0,1fr)_84px] gap-3 px-4";
+
 function HoldersTab({ token }: { token: TokenDetail }) {
   const { data } = useHolders(token.address);
   if (!data) return <ListSkeleton />;
+  const price = token.priceUsd || 0;
   return (
     <div>
-      <ColHead
-        cols={[
-          ["Holder", "text-left"],
-          ["Share", "text-center"],
-          ["% held", "text-right"],
-          ["Value", "text-right"],
-        ]}
-      />
+      {/* PnL, names & avg entry are illustrative — see the note. Holdings are real. */}
+      <div className="flex items-center justify-between gap-2 px-4 py-1.5 bg-surface/30 border-b border-line/60">
+        <span className="text-[10px] text-faint">
+          Holdings are live on-chain · trader name, PnL &amp; entry are illustrative
+        </span>
+        <span
+          title="ChadWallet doesn't run a per-wallet swap indexer, so trader names, PnL and avg entry shown here are generated samples. % held and value are real."
+          className="shrink-0 rounded-full border border-line bg-surface-2 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-faint"
+        >
+          Sample
+        </span>
+      </div>
+      <div
+        className={cn(
+          HOLDER_GRID,
+          "sticky top-0 z-10 py-2 bg-ink/95 backdrop-blur border-b border-line text-[11px] uppercase tracking-wide text-faint"
+        )}
+      >
+        <span className="text-left">Trader</span>
+        <span className="text-right">Position</span>
+        <span className="text-right">PnL</span>
+        <span className="text-right">Avg entry</span>
+      </div>
       <div className="divide-y divide-line/50">
-        {data.map((h) => (
-          <div
-            key={h.address}
-            className="grid grid-cols-[1fr_64px_92px_44px] items-center gap-3 px-4 py-2 text-sm hover:bg-white/5 transition-colors"
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="w-5 shrink-0 text-xs text-faint tnum">{h.rank}</span>
-              <AddrAvatar addr={h.address} />
-              <span className="truncate text-white tnum">
-                {shortAddr(h.address, 4, 4)}
-              </span>
-            </div>
-            <div className="justify-self-center w-14">
-              <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
-                <div
-                  className="h-full bg-chad/70"
-                  style={{ width: `${Math.min(100, h.pct * 4)}%` }}
-                />
+        {data.map((h) => {
+          const pnlPct = samplePnlPct(h.address);
+          const pnlUsd = (h.valueUsd * pnlPct) / 100;
+          const entry = price > 0 ? price / (1 + pnlPct / 100) : 0;
+          const up = pnlPct >= 0;
+          return (
+            <div
+              key={h.address}
+              className={cn(HOLDER_GRID, "items-center py-2 text-sm hover:bg-white/5 transition-colors")}
+            >
+              {/* Trader */}
+              <div className="flex items-center gap-2 min-w-0">
+                <AddrAvatar addr={h.address} size={30} />
+                <div className="min-w-0 leading-tight">
+                  <div className="truncate text-white font-medium">
+                    {sampleName(h.address)}
+                  </div>
+                  <div className="text-[10px] text-faint tnum">
+                    {sampleHold(h.address)} hold
+                  </div>
+                </div>
+              </div>
+              {/* Position — REAL value + real % held */}
+              <div className="text-right leading-tight">
+                <div className="tnum text-white">{formatCompactUsd(h.valueUsd)}</div>
+                <div className="text-[10px] text-faint tnum">{h.pct.toFixed(2)}%</div>
+              </div>
+              {/* PnL — sample */}
+              <div className={cn("text-right leading-tight tnum", up ? "text-up" : "text-down")}>
+                <div>
+                  {up ? "+" : ""}
+                  {formatCompactUsd(Math.abs(pnlUsd))}
+                </div>
+                <div className="text-[10px]">
+                  {up ? "▲" : "▼"} {Math.abs(pnlPct).toFixed(1)}%
+                </div>
+              </div>
+              {/* Avg entry — sample */}
+              <div className="text-right tnum text-muted">
+                {entry >= 1 ? `$${entry.toFixed(2)}` : `$${entry.toPrecision(2)}`}
               </div>
             </div>
-            <span className="tnum text-white text-right">{h.pct.toFixed(2)}%</span>
-            <span className="tnum text-muted text-right">
-              {formatCompactUsd(h.valueUsd)}
-            </span>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

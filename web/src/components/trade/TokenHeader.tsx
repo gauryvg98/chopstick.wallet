@@ -7,6 +7,40 @@ import { ChangeText } from "@/components/ui/ChangeText";
 import { useSpotlight } from "@/components/TokenSpotlight";
 import { LivePrice, useLivePrice } from "@/lib/livePrices";
 import { formatCompactUsd, formatCompact, shortAddr } from "@/lib/format";
+import { useWatchlist } from "@/lib/watchlist";
+import { cn } from "@/lib/cn";
+
+/** A small circular action button for the header's link/social row. */
+function IconAction({
+  href,
+  onClick,
+  title,
+  active,
+  children,
+}: {
+  href?: string;
+  onClick?: () => void;
+  title: string;
+  active?: boolean;
+  children: React.ReactNode;
+}) {
+  const cls = cn(
+    "grid h-6 w-6 place-items-center rounded-md border border-line bg-surface-2 text-[12px] transition-colors",
+    active ? "text-chad border-chad/40" : "text-muted hover:text-white hover:border-line-2"
+  );
+  if (href) {
+    return (
+      <a href={href} target="_blank" rel="noreferrer" title={title} className={cls}>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <button onClick={onClick} title={title} className={cls} aria-pressed={active}>
+      {children}
+    </button>
+  );
+}
 
 /** fomo-style bordered stat box: tiny uppercase label over a tnum value. */
 function StatBox({
@@ -56,6 +90,7 @@ export function TokenHeader({ address }: { address: string }) {
   const { data: holders } = useHolders(address);
   const { price: livePrice } = useLivePrice(address);
   const { open: openSpotlight } = useSpotlight();
+  const { has: isWatched, toggle: toggleWatch } = useWatchlist();
   const [copied, setCopied] = useState(false);
 
   // Market cap that tracks the LIVE price (price × supply), so it moves in
@@ -115,6 +150,36 @@ export function TokenHeader({ address }: { address: string }) {
                   🌱
                 </span>
               )}
+              {/* social + action icons (fomo-style) */}
+              <div className="flex items-center gap-1 pl-1 border-l border-line">
+                {t.website && (
+                  <IconAction href={t.website} title="Website">
+                    🌐
+                  </IconAction>
+                )}
+                {t.twitter && (
+                  <IconAction href={t.twitter} title="X (Twitter)">
+                    <span className="font-bold">𝕏</span>
+                  </IconAction>
+                )}
+                <IconAction
+                  href={`https://solscan.io/token/${t.address}`}
+                  title="View on Solscan"
+                >
+                  🔎
+                </IconAction>
+                <IconAction
+                  onClick={() => toggleWatch(t.address)}
+                  active={isWatched(t.address)}
+                  title={
+                    isWatched(t.address)
+                      ? "Remove from watchlist"
+                      : "Add to watchlist"
+                  }
+                >
+                  {isWatched(t.address) ? "★" : "☆"}
+                </IconAction>
+              </div>
             </div>
             <button
               onClick={() => {

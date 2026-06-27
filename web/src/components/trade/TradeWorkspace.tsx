@@ -23,32 +23,18 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
   return settled;
 }
 
-function MiddleColumn({ display, settled }: { display: string; settled: string }) {
-  // Holders/trades feed follows the *settled* token so flicking past tokens
-  // doesn't fetch their feeds.
-  const { data: token } = useToken(settled);
-  return (
-    <div className="flex flex-col min-h-0 lg:h-full">
-      {/* Header flips instantly from seed data on every click. */}
-      <TokenHeader address={display} />
-      {/* Chart (GeckoTerminal OHLCV + the live candle subscription) only loads
-          for the token you land on. */}
-      <ChartCard address={settled} />
-      {token ? (
-        <HoldersTrades token={token} />
-      ) : (
-        <div className="flex-1 min-h-[40vh]" />
-      )}
-    </div>
-  );
-}
-
 /**
  * Token-specific workspace (the part that *should* change per token).
  * The trending sidebar lives in the persistent trade layout, so it stays put
- * across navigation. This is just the middle + buy/sell columns.
- * Desktop: chart+info+feed | buy/sell — each scrolls independently.
- * Mobile: single scrolling column, with trending pinned below.
+ * across navigation.
+ *
+ * Desktop: a 2-col grid — col 1 stacks header → chart → feed (the feed scrolls),
+ * col 2 is the full-height buy/sell panel; each scrolls independently.
+ *
+ * Mobile: a single scrolling column, but re-ordered via CSS `order` so the
+ * buy/sell panel sits right under the price header — you can trade without
+ * scrolling past the chart and the whole trades feed first. Chart, feed and
+ * trending follow below.
  */
 export function TradeWorkspace({ address }: { address: string }) {
   // The displayed token comes from the shared context (updated synchronously on
@@ -59,18 +45,41 @@ export function TradeWorkspace({ address }: { address: string }) {
   // chart's WS subscription follow a debounced address, so rapidly clicking
   // through tokens only hits the backend for the one you settle on.
   const settled = useDebouncedValue(display, 200);
-  return (
-    <div className="h-full overflow-y-auto lg:overflow-hidden scroll-thin lg:grid lg:grid-cols-[minmax(0,1fr)_360px]">
-      {/* Middle */}
-      <MiddleColumn display={display} settled={settled} />
+  // Feed follows the *settled* token so flicking past tokens doesn't fetch feeds.
+  const { data: token } = useToken(settled);
 
-      {/* Right — buy/sell targets the clicked token immediately */}
-      <div className="lg:h-full lg:min-h-0">
+  return (
+    <div className="flex flex-col h-full overflow-y-auto lg:overflow-hidden scroll-thin lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:grid-rows-[auto_auto_minmax(0,1fr)]">
+      {/* Header — top of col 1 (desktop) / top (mobile). Flips instantly from
+          seed data on every click. */}
+      <div className="order-1 lg:col-start-1 lg:row-start-1">
+        <TokenHeader address={display} />
+      </div>
+
+      {/* Buy / sell — right under the header on mobile so trading is one tap away;
+          full-height right column on desktop. Targets the clicked token at once. */}
+      <div className="order-2 lg:col-start-2 lg:row-start-1 lg:row-span-3 lg:h-full lg:min-h-0">
         <TradePanel address={display} />
       </div>
 
+      {/* Chart — only loads for the token you land on. */}
+      <div className="order-3 lg:col-start-1 lg:row-start-2">
+        <ChartCard address={settled} />
+      </div>
+
+      {/* Holders / trades feed (scrolls within its row on desktop; sizes to its
+          content on mobile — min-h-0 only on desktop, or the box collapses to 0
+          and the feed overlaps the trending list below it). */}
+      <div className="order-4 flex flex-col lg:min-h-0 lg:col-start-1 lg:row-start-3">
+        {token ? (
+          <HoldersTrades token={token} />
+        ) : (
+          <div className="flex-1 min-h-[40vh]" />
+        )}
+      </div>
+
       {/* Trending — mobile only, below (the layout's sidebar is desktop-only) */}
-      <div className="lg:hidden h-[420px] border-t border-line">
+      <div className="order-5 lg:hidden h-[420px] border-t border-line">
         <TrendingList activeAddress={display} />
       </div>
     </div>

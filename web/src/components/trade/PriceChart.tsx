@@ -5,6 +5,7 @@ import {
   createChart,
   AreaSeries,
   CandlestickSeries,
+  HistogramSeries,
   ColorType,
   CrosshairMode,
   LineStyle,
@@ -32,9 +33,18 @@ const BUCKET_SECONDS: Record<Timeframe, number> = {
 
 const UP = "#22e07b"; // spring green — brand accent
 const DOWN = "#ff5765"; // refined red
+const VOL_UP = "rgba(34,224,123,0.45)";
+const VOL_DOWN = "rgba(255,87,101,0.45)";
 
 function precisionFor(price: number): number {
   return price >= 100 ? 2 : price >= 1 ? 4 : price >= 0.01 ? 6 : 9;
+}
+
+/** Format a value for the OHLC legend, matching the active metric. */
+function fmtVal(v: number, metric: ChartMetric): string {
+  if (metric === "mcap") return formatCompactUsd(v);
+  const p = precisionFor(v);
+  return v.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: p });
 }
 
 interface Bar {
@@ -43,6 +53,7 @@ interface Bar {
   high: number;
   low: number;
   close: number;
+  volume: number;
 }
 
 /** Coerce to strictly-ascending, unique timestamps (the lib asserts on dupes). */
@@ -50,12 +61,13 @@ function cleanBars(data: OHLCV[]): Bar[] {
   const out: Bar[] = [];
   let prev = -Infinity;
   for (const d of data) {
+    const b = { time: d.time, open: d.open, high: d.high, low: d.low, close: d.close, volume: d.volume ?? 0 };
     if (d.time < prev) continue;
     if (d.time === prev) {
-      out[out.length - 1] = { time: d.time, open: d.open, high: d.high, low: d.low, close: d.close };
+      out[out.length - 1] = b;
       continue;
     }
-    out.push({ time: d.time, open: d.open, high: d.high, low: d.low, close: d.close });
+    out.push(b);
     prev = d.time;
   }
   return out;
@@ -68,6 +80,7 @@ export function PriceChart({
   kind = "candle",
   metric = "price",
   supply = 0,
+  symbol = "",
 }: {
   address: string;
   tf: Timeframe;
@@ -75,18 +88,31 @@ export function PriceChart({
   kind?: ChartKind;
   metric?: ChartMetric;
   supply?: number;
+  symbol?: string;
 }) {
   // Market cap = price × supply. When in "mcap" mode every value is scaled so the
-  // y-axis reads the market cap instead of the raw price.
+  // y-axis reads the market cap instead of the raw price. Volume is never scaled.
   const scale = metric === "mcap" && supply > 0 ? supply : 1;
   const scaleBar = (b: Bar): Bar =>
     scale === 1
       ? b
-      : { time: b.time, open: b.open * scale, high: b.high * scale, low: b.low * scale, close: b.close * scale };
+      : {
+          time: b.time,
+          open: b.open * scale,
+          high: b.high * scale,
+          low: b.low * scale,
+          close: b.close * scale,
+          volume: b.volume,
+        };
   const containerRef = useRef<HTMLDivElement>(null);
+  const legendRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Area" | "Candlestick"> | null>(null);
+  const volSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
   const lastBarRef = useRef<Bar | null>(null);
+  // The current authoritative bars, so the crosshair legend can read full OHLC at
+  // any hovered time regardless of whether the visible series is candle or line.
+  const barsRef = useRef<Bar[]>([]);
   // How many bars the series currently holds — so a transient short payload from
   // the backend (a cold-start fallback, a cache-expiry hiccup) can never wipe a
   // healthy chart down to a handful of bars on reconcile.
@@ -94,11 +120,37 @@ export function PriceChart({
   // Identifies the current (token, timeframe, kind). When it changes we fit the
   // view; otherwise we preserve the user's zoom/pan across reconciles.
   const viewKeyRef = useRef<string>("");
+  // Keep the latest formatting context available to the crosshair handler.
+  const ctxRef = useRef({ symbol, tf, metric });
+  ctxRef.current = { symbol, tf, metric };
   const { data, isLoading } = useOHLCV(address, tf, fast);
   const [streamed, setStreamed] = useState(false);
   // Reset the "got a live bar" flag whenever the token/timeframe changes.
   useEffect(() => setStreamed(false), [address, tf]);
   const empty = (!data || data.length === 0) && !streamed;
+
+  // Paint the OHLC legend for a given bar (the hovered one, else the latest).
+  const paintLegend = (bar: Bar | null) => {
+    const el = legendRef.current;
+    if (!el) return;
+    const { symbol: sym, tf: t, metric: m } = ctxRef.current;
+    if (!bar) {
+      el.innerHTML = "";
+      return;
+    }
+    const up = bar.close >= bar.open;
+    const col = up ? UP : DOWN;
+    const chg = bar.open > 0 ? ((bar.close - bar.open) / bar.open) * 100 : 0;
+    const v = (n: number) => `<span style="color:${col}">${fmtVal(n, m)}</span>`;
+    el.innerHTML =
+      `<span style="color:#6b7280">${sym || "—"} · ${t} · chad</span>` +
+      ` <span style="color:#6b7280">O</span>${v(bar.open)}` +
+      ` <span style="color:#6b7280">H</span>${v(bar.high)}` +
+      ` <span style="color:#6b7280">L</span>${v(bar.low)}` +
+      ` <span style="color:#6b7280">C</span>${v(bar.close)}` +
+      ` <span style="color:${col}">${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%</span>` +
+      (bar.volume > 0 ? ` <span style="color:#6b7280">Vol</span> <span style="color:#8a909b">${formatCompactUsd(bar.volume)}</span>` : "");
+  };
 
   // Live head: the backend streams the forming candle for this (token, tf) over
   // the websocket. We just apply each bar — update() touches only the last bar,
@@ -110,7 +162,8 @@ export function PriceChart({
     // so you never see a lone candle flicker before the full window appears.
     if (data === undefined) return;
     setStreamed(true);
-    const incoming = scaleBar({ time: raw.time, open: raw.open, high: raw.high, low: raw.low, close: raw.close });
+    const prevVol = lastBarRef.current?.volume ?? 0;
+    const incoming = scaleBar({ time: raw.time, open: raw.open, high: raw.high, low: raw.low, close: raw.close, volume: prevVol });
     const last = lastBarRef.current;
     // The live stream (Jupiter, current minute) and the history (GeckoTerminal,
     // which lags real-time by a few minutes) are different price sources, so the
@@ -121,7 +174,7 @@ export function PriceChart({
     //  #2b new bucket   → open AT the previous close, so the live edge stays
     //      continuous with history (and across every rollover) instead of
     //      teleporting to wherever the live source happens to price it.
-    const bar =
+    const bar: Bar =
       last && incoming.time === last.time
         ? {
             time: last.time,
@@ -129,6 +182,7 @@ export function PriceChart({
             high: Math.max(last.high, incoming.high),
             low: Math.min(last.low, incoming.low),
             close: incoming.close,
+            volume: last.volume,
           }
         : last
         ? {
@@ -137,9 +191,11 @@ export function PriceChart({
             high: Math.max(incoming.high, last.close),
             low: Math.min(incoming.low, last.close),
             close: incoming.close,
+            volume: 0,
           }
         : incoming;
     lastBarRef.current = bar;
+    paintLegend(bar);
     try {
       if (kind === "candle") {
         series.update(bar as never);
@@ -160,7 +216,7 @@ export function PriceChart({
         background: { type: ColorType.Solid, color: "transparent" },
         textColor: "#8a909b",
         fontFamily: "var(--font-inter), sans-serif",
-        attributionLogo: false,
+        attributionLogo: true, // TradingView attribution mark (like fomo)
       },
       grid: {
         vertLines: { color: "rgba(255,255,255,0.025)" },
@@ -171,7 +227,7 @@ export function PriceChart({
         vertLine: { color: "#3a4150", width: 1, style: LineStyle.Dashed, labelBackgroundColor: "#22e07b" },
         horzLine: { color: "#3a4150", width: 1, style: LineStyle.Dashed, labelBackgroundColor: "#22e07b" },
       },
-      rightPriceScale: { borderColor: "#262a31", scaleMargins: { top: 0.12, bottom: 0.12 } },
+      rightPriceScale: { borderColor: "#262a31", scaleMargins: { top: 0.1, bottom: 0.26 } },
       timeScale: { borderColor: "#262a31", timeVisible: true, secondsVisible: false, rightOffset: 4 },
       autoSize: true,
       // Zoom + pan: wheel to zoom, drag to pan, pinch on touch.
@@ -179,18 +235,60 @@ export function PriceChart({
       handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
     });
     chartRef.current = chart;
+
+    // The attribution logo ships with no tooltip; label it "Charts by TradingView"
+    // (fomo-style) once the library has injected it into the container.
+    const labelLogo = () => {
+      const a = el.querySelector<HTMLAnchorElement>('a[href*="tradingview.com"]');
+      if (a) a.title = "Charts by TradingView";
+    };
+    labelLogo();
+    const logoTid = setTimeout(labelLogo, 300);
+
+    // Volume histogram — its own overlay scale pinned to the bottom strip, so it
+    // sits under the candles like fomo's chart.
+    const vol = chart.addSeries(HistogramSeries, {
+      priceFormat: { type: "volume" },
+      priceScaleId: "vol",
+      priceLineVisible: false,
+      lastValueVisible: false,
+    });
+    chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
+    volSeriesRef.current = vol;
+
+    // OHLC legend follows the crosshair; falls back to the latest bar.
+    const onMove = (param: { time?: unknown }) => {
+      if (param.time == null) {
+        paintLegend(lastBarRef.current);
+        return;
+      }
+      const bars = barsRef.current;
+      // bars are time-ascending; find the hovered one.
+      const t = param.time as number;
+      let hit: Bar | null = null;
+      for (let i = bars.length - 1; i >= 0; i--) {
+        if (bars[i].time === t) { hit = bars[i]; break; }
+        if (bars[i].time < t) { hit = bars[i]; break; }
+      }
+      paintLegend(hit ?? lastBarRef.current);
+    };
+    chart.subscribeCrosshairMove(onMove);
+
     // Double-click anywhere to reset the zoom.
     const reset = () => chart.timeScale().fitContent();
     chart.subscribeDblClick(reset);
     return () => {
+      clearTimeout(logoTid);
       chart.unsubscribeDblClick(reset);
+      chart.unsubscribeCrosshairMove(onMove);
       chart.remove();
       chartRef.current = null;
       seriesRef.current = null;
+      volSeriesRef.current = null;
     };
   }, []);
 
-  // (Re)create the series whenever the chart kind changes.
+  // (Re)create the price series whenever the chart kind changes.
   useEffect(() => {
     const chart = chartRef.current;
     if (!chart) return;
@@ -242,8 +340,11 @@ export function PriceChart({
       // and the view stays zoomed to the lone live candle instead of fitting.
       if (key !== viewKeyRef.current) {
         series.setData([]);
+        volSeriesRef.current?.setData([]);
         lastBarRef.current = null;
+        barsRef.current = [];
         barsLenRef.current = 0;
+        paintLegend(null);
       }
       return;
     }
@@ -283,6 +384,15 @@ export function PriceChart({
       series.setData(bars.map((b) => ({ time: b.time as UTCTimestamp, value: b.close })) as never);
     }
 
+    // Volume histogram, coloured by each bar's direction.
+    volSeriesRef.current?.setData(
+      bars.map((b) => ({
+        time: b.time as UTCTimestamp,
+        value: b.volume,
+        color: b.close >= b.open ? VOL_UP : VOL_DOWN,
+      })) as never
+    );
+
     if (fresh) {
       chart.timeScale().fitContent();
       viewKeyRef.current = key;
@@ -290,13 +400,20 @@ export function PriceChart({
       chart.timeScale().setVisibleLogicalRange(range); // keep the user's zoom/pan
     }
     lastBarRef.current = last;
+    barsRef.current = bars;
     barsLenRef.current = bars.length;
+    paintLegend(last);
   }, [data, kind, address, tf, metric, scale]);
 
   const resetZoom = () => chartRef.current?.timeScale().fitContent();
 
   return (
     <div className="relative h-full w-full">
+      {/* OHLC legend (fomo-style), updated direct-to-DOM on crosshair move. */}
+      <div
+        ref={legendRef}
+        className="pointer-events-none absolute left-3 top-2 z-10 text-[11px] font-semibold tnum tracking-tight"
+      />
       <div ref={containerRef} className="h-full w-full" />
       <button
         onClick={resetZoom}
