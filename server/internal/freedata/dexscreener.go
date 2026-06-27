@@ -30,6 +30,10 @@ type dexPair struct {
 		Name    string `json:"name"`
 		Symbol  string `json:"symbol"`
 	} `json:"baseToken"`
+	QuoteToken struct {
+		Address string `json:"address"`
+		Symbol  string `json:"symbol"`
+	} `json:"quoteToken"`
 	PriceUsd  string  `json:"priceUsd"`
 	MarketCap float64 `json:"marketCap"`
 	Fdv       float64 `json:"fdv"`
@@ -100,15 +104,20 @@ func (c *dexClient) token(ctx context.Context, mint string) (*types.TokenDetail,
 	}
 
 	// Pick the most-TRADED Solana pair where this token is the base — but only
-	// among pools that still hold real liquidity. Two traps to avoid:
+	// among pools that still hold real liquidity. Three traps to avoid:
 	//   1. Highest-LIQUIDITY can be idle (stale OHLCV/trades → frozen chart).
 	//   2. A DEAD pool ($0 liquidity) keeps a stale, often wildly wrong price
 	//      plus leftover recorded volume — so pure volume-ranking picks it and
 	//      mis-values holdings by orders of magnitude.
-	// So: rank by 24h volume *among pools with non-trivial liquidity* (liquidity
-	// breaks ties). Only if no pool has real liquidity do we fall back to any.
+	//   3. A pair quoted in a MIS-PRICED token reports a garbage USD price even
+	//      with real liquidity + volume (e.g. JUP/MET showing $1175 when JUP is
+	//      $0.23). DexScreener's priceUsd is only trustworthy when the quote
+	//      token has a reliable USD value — so prefer USDC/USDT/SOL-quoted pools.
+	// Rank by 24h volume among liquid pools (liquidity breaks ties), preferring
+	// trusted-quote pairs; widen the net only if none qualify.
 	const minLiqUsd = 1.0
-	pick := func(requireLiq bool) *dexPair {
+	trustedQuote := map[string]bool{"USDC": true, "USDT": true, "SOL": true, "WSOL": true}
+	pick := func(requireLiq, trustedOnly bool) *dexPair {
 		var best *dexPair
 		for i := range r.Pairs {
 			p := &r.Pairs[i]
@@ -118,6 +127,9 @@ func (c *dexClient) token(ctx context.Context, mint string) (*types.TokenDetail,
 			if requireLiq && p.Liquidity.Usd < minLiqUsd {
 				continue
 			}
+			if trustedOnly && !trustedQuote[strings.ToUpper(p.QuoteToken.Symbol)] {
+				continue
+			}
 			if best == nil || p.Volume.H24 > best.Volume.H24 ||
 				(p.Volume.H24 == best.Volume.H24 && p.Liquidity.Usd > best.Liquidity.Usd) {
 				best = p
@@ -125,9 +137,14 @@ func (c *dexClient) token(ctx context.Context, mint string) (*types.TokenDetail,
 		}
 		return best
 	}
-	best := pick(true)
+	// Reliable USD price first (liquid + trusted quote), then liquid-any-quote,
+	// then any liquid pool, then any pool at all.
+	best := pick(true, true)
 	if best == nil {
-		best = pick(false) // no pool with real liquidity — best effort
+		best = pick(true, false)
+	}
+	if best == nil {
+		best = pick(false, false) // no pool with real liquidity — best effort
 	}
 	if best == nil {
 		// fall back to any Solana pair for this token

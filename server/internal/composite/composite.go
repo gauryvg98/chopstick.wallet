@@ -42,7 +42,7 @@ func (c *Composite) Token(ctx context.Context, address string) (*types.TokenDeta
 	}
 	// Make the header's Top-10 % consistent with the (real) Helius holder list.
 	if c.he != nil {
-		if hs, herr := c.he.Holders(ctx, address, td.TotalSupply, td.PriceUsd); herr == nil && len(hs) > 0 {
+		if hs, herr := c.he.Holders(ctx, address, td.TotalSupply, td.PriceUsd, td.MarketCap); herr == nil && len(hs) > 0 {
 			top10 := 0.0
 			for i := 0; i < 10 && i < len(hs); i++ {
 				top10 += hs[i].Pct
@@ -56,7 +56,7 @@ func (c *Composite) Token(ctx context.Context, address string) (*types.TokenDeta
 func (c *Composite) Holders(ctx context.Context, address string) ([]types.Holder, error) {
 	if c.he != nil {
 		price, supply := c.be.PriceSupply(ctx, address)
-		if hs, err := c.he.Holders(ctx, address, supply, price); err == nil && len(hs) > 0 {
+		if hs, err := c.he.Holders(ctx, address, supply, price, price*supply); err == nil && len(hs) > 0 {
 			return hs, nil
 		} else if err != nil {
 			log.Printf("helius holders fallback for %s: %v", address, err)

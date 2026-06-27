@@ -482,7 +482,7 @@ func (c *Client) SignatureStatus(ctx context.Context, sig string) (string, error
 
 // Holders returns the top token holders for a mint (token accounts resolved to
 // owner wallets), with pct/value computed from the supplied supply + price.
-func (c *Client) Holders(ctx context.Context, mint string, supply, price float64) ([]types.Holder, error) {
+func (c *Client) Holders(ctx context.Context, mint string, supply, price, marketCap float64) ([]types.Holder, error) {
 	var la struct {
 		Result struct {
 			Value []struct {
@@ -549,9 +549,17 @@ func (c *Client) Holders(ctx context.Context, mint string, supply, price float64
 		if supply > 0 {
 			pct = ui / supply * 100
 		}
+		// Value from pct × marketCap (the two reliable aggregates), NOT ui × price:
+		// some tokens report a TotalSupply whose scale disagrees with the on-chain
+		// uiAmount, which leaves the ratio (pct) sane but blows up ui × price into
+		// absurd numbers. Fall back to ui × price only when we have no market cap.
+		val := ui * price
+		if marketCap > 0 && supply > 0 {
+			val = ui / supply * marketCap
+		}
 		out = append(out, types.Holder{
 			Rank: len(out) + 1, Address: owner, Pct: pct,
-			ValueUsd: ui * price, TokenAmount: ui,
+			ValueUsd: val, TokenAmount: ui,
 		})
 	}
 	return out, nil

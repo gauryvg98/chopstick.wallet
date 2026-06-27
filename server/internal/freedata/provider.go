@@ -347,16 +347,16 @@ func (p *Provider) Token(ctx context.Context, mint string) (*types.TokenDetail, 
 }
 
 // priceSupplyFor resolves price + supply from a DEX, else pump.fun.
-func (p *Provider) priceSupplyFor(ctx context.Context, mint string) (price, supply float64) {
+func (p *Provider) priceSupplyFor(ctx context.Context, mint string) (price, supply, marketCap float64) {
 	if td, _, err := p.dex.token(ctx, mint); err == nil {
-		return td.PriceUsd, td.TotalSupply
+		return td.PriceUsd, td.TotalSupply, td.MarketCap
 	}
 	if p.pf != nil {
 		if t, e := p.pf.Coin(ctx, mint); e == nil {
-			return t.PriceUsd, t.TotalSupply
+			return t.PriceUsd, t.TotalSupply, t.MarketCap
 		}
 	}
-	return 0, 0
+	return 0, 0, 0
 }
 
 func (p *Provider) poolFor(ctx context.Context, mint string) (string, error) {
@@ -444,9 +444,9 @@ func (p *Provider) primeLine(ctx context.Context, mint, pool string) {
 }
 
 func (p *Provider) Holders(ctx context.Context, mint string) ([]types.Holder, error) {
-	price, supply := p.priceSupplyFor(ctx, mint)
+	price, supply, marketCap := p.priceSupplyFor(ctx, mint)
 	if p.he != nil {
-		if hs, err := p.he.Holders(ctx, mint, supply, price); err == nil && len(hs) > 0 {
+		if hs, err := p.he.Holders(ctx, mint, supply, price, marketCap); err == nil && len(hs) > 0 {
 			return hs, nil
 		}
 	}
