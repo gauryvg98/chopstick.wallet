@@ -46,7 +46,7 @@ export function SocialProof() {
 
       <div className="relative mx-auto max-w-5xl px-4 sm:px-6 grid lg:grid-cols-2 gap-12 items-center">
         {/* App demo — loops silently */}
-        <div className="flex justify-center lg:justify-end">
+        <div className="flex justify-center lg:justify-start lg:ml-4 xl:ml-8">
           <video
             src="/brand/demo.mp4"
             autoPlay

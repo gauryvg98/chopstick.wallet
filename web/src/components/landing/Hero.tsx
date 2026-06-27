@@ -35,13 +35,7 @@ function FloatingCard({
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden bg-ink">
-      {/* cosmos: tiled starfield + brand glows, fading into the page below */}
-      <div className="pointer-events-none absolute inset-0 starfield opacity-50" />
-      <div className="pointer-events-none absolute -top-32 right-1/4 h-[28rem] w-[28rem] rounded-full bg-chad/20 blur-[140px]" />
-      <div className="pointer-events-none absolute -bottom-24 -left-16 h-96 w-96 rounded-full bg-teal/20 blur-[130px]" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-b from-transparent to-ink" />
-
+    <section className="relative overflow-hidden">
       <div className="relative mx-auto max-w-6xl px-4 sm:px-6 pt-16 pb-20 md:pt-24 md:pb-28 grid md:grid-cols-2 gap-10 items-center">
         {/* Left */}
         <div>

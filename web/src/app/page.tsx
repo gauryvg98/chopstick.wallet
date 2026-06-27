@@ -9,18 +9,30 @@ import { Footer } from "@/components/Footer";
 
 export default function LandingPage() {
   return (
-    <div className="flex flex-col min-h-full">
-      <SiteHeader />
-      <TokenBanner direction="left" />
-      <main className="flex-1">
-        <Hero />
-        <WebSection />
-        <FeatureCards />
-        <ChadBoard />
-        <SocialProof />
-      </main>
-      <TokenBanner direction="right" />
-      <Footer />
+    <div className="relative flex flex-col min-h-full">
+      {/* Fixed cosmic backdrop — dark base + layered starfield + nebula glows,
+          shown through the (transparent) sections above it. */}
+      <div className="pointer-events-none fixed inset-0 z-0 bg-ink">
+        <div className="absolute inset-0 starfield opacity-70" />
+        <div className="absolute inset-0 starfield opacity-40" style={{ backgroundSize: "230px 230px" }} />
+        <div className="absolute -top-40 left-[12%] h-[42rem] w-[42rem] rounded-full bg-chad/10 blur-[170px]" />
+        <div className="absolute top-1/3 right-[2%] h-[38rem] w-[38rem] rounded-full bg-teal/10 blur-[170px]" />
+        <div className="absolute bottom-[4%] left-[28%] h-[34rem] w-[34rem] rounded-full bg-sky/[0.08] blur-[170px]" />
+      </div>
+
+      <div className="relative z-10 flex flex-1 flex-col">
+        <SiteHeader />
+        <TokenBanner direction="left" />
+        <main className="flex-1">
+          <Hero />
+          <WebSection />
+          <FeatureCards />
+          <ChadBoard />
+          <SocialProof />
+        </main>
+        <TokenBanner direction="right" />
+        <Footer />
+      </div>
     </div>
   );
 }

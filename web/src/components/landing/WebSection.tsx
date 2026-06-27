@@ -240,7 +240,7 @@ function PhoneScreen() {
 
 export function WebSection() {
   return (
-    <section className="relative overflow-hidden border-y border-line bg-app-glow">
+    <section className="relative overflow-hidden">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 py-24 sm:py-32 text-center">
         <span className="text-sm font-bold uppercase tracking-widest text-chad">
           Now available on web
@@ -268,7 +268,7 @@ export function WebSection() {
 
           {/* sits beyond the desktop's bottom-right corner so it doesn't cover the
               buy panel — reads as a separate device, not a cut-off overlay */}
-          <div className="absolute -bottom-16 right-0 hidden sm:block sm:-right-16 lg:-right-24 [perspective:1300px]">
+          <div className="absolute -bottom-16 right-2 hidden sm:block sm:right-4 lg:right-8 [perspective:1300px]">
             <div className="animate-[float_8s_ease-in-out_infinite]">
               <div className="relative [transform-style:preserve-3d] [transform:rotateY(-20deg)_rotateX(6deg)]">
                 {/* contact shadow */}

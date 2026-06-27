@@ -31,7 +31,7 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
 
 export function Footer() {
   return (
-    <footer className="border-t border-line/60 bg-ink">
+    <footer className="border-t border-line/60 bg-ink/60 backdrop-blur-sm">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 py-14">
         <div className="grid sm:grid-cols-[1.4fr_1fr_1fr_1fr] gap-10">
           <div className="max-w-xs">
