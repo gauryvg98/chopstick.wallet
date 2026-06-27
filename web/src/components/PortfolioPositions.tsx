@@ -7,6 +7,7 @@ import { useLivePrice } from "@/lib/livePrices";
 import { SOL_MINT } from "@/lib/swap";
 import { TokenAvatar } from "@/components/ui/TokenAvatar";
 import { useSpotlight } from "@/components/TokenSpotlight";
+import { PortfolioChart } from "@/components/PortfolioChart";
 import {
   formatSol,
   formatUsd,
@@ -81,14 +82,12 @@ export function PortfolioPositions({ owner }: { owner: string }) {
 
   return (
     <div className="space-y-4">
-      {/* total value */}
-      <div className="rounded-2xl border border-line bg-surface/60 px-5 py-5 text-center">
-        <div className="text-xs uppercase tracking-wide text-faint">Portfolio value</div>
-        <div className="mt-1 font-display font-bold text-4xl text-white tnum">
-          {formatUsd(totalValueSol * solPrice)}
-        </div>
-        <div className="text-sm text-muted tnum">{formatSol(totalValueSol)}</div>
-      </div>
+      {/* portfolio value + equity curve */}
+      <PortfolioChart
+        items={activity?.items ?? []}
+        currentTotalUsd={totalValueSol * solPrice}
+        solPrice={solPrice}
+      />
 
       {/* PnL headline */}
       <div className="grid grid-cols-3 gap-3">
