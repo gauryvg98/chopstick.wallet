@@ -5,7 +5,7 @@ import { StoreButtons } from "@/components/StoreButtons";
 export function SocialProof() {
   return (
     <section className="relative overflow-hidden py-24">
-      {/* concentric gradient rings */}
+      {/* concentric rings with tokens orbiting along them */}
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
         {[680, 520, 360, 220].map((s, i) => (
           <div
@@ -15,6 +15,33 @@ export function SocialProof() {
           />
         ))}
         <div className="absolute h-72 w-72 rounded-full bg-chad/20 blur-[100px]" />
+
+        {/* real tokens orbiting the rings — outer container spins (token rides the
+            ring), inner counter-spins so the logo stays upright. Negative delays
+            spread tokens that share a ring. */}
+        {[
+          { d: 680, dur: 16, rev: false, img: "bonk", delay: 0 },
+          { d: 680, dur: 16, rev: false, img: "pengu", delay: -8 },
+          { d: 520, dur: 12, rev: true, img: "wif", delay: 0 },
+          { d: 520, dur: 12, rev: true, img: "wen", delay: -6 },
+          { d: 360, dur: 9, rev: false, img: "jup", delay: 0 },
+          { d: 360, dur: 9, rev: false, img: "popcat", delay: -4.5 },
+        ].map((o, i) => (
+          <div
+            key={i}
+            className="absolute"
+            style={{ width: o.d, height: o.d, animation: `orbit ${o.dur}s linear ${o.delay}s infinite${o.rev ? " reverse" : ""}` }}
+          >
+            <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2">
+              <div style={{ animation: `orbit ${o.dur}s linear ${o.delay}s infinite${o.rev ? "" : " reverse"}` }}>
+                <div className="h-11 w-11 overflow-hidden rounded-full bg-ink shadow-lg ring-2 ring-ink/70">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={`/brand/tokens/${o.img}.png`} alt="" className="h-full w-full object-cover" />
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className="relative mx-auto max-w-5xl px-4 sm:px-6 grid lg:grid-cols-2 gap-12 items-center">
@@ -35,9 +62,9 @@ export function SocialProof() {
         {/* Pitch + get-the-app */}
         <div className="text-center lg:text-left">
           <h2 className="font-display font-bold text-4xl sm:text-6xl tracking-tight lowercase">
-            a trading app
+            built for chads.
             <br />
-            for the rest of us.
+            not quants.
           </h2>
           <p className="mt-5 text-lg text-muted">
             Join <span className="text-white font-bold">500k+</span> traders making
