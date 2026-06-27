@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -58,10 +59,24 @@ func (c *Client) Prices(ctx context.Context, mints []string) (map[string]PriceTi
 	return out, nil
 }
 
-type Client struct{ http *http.Client }
+type Client struct {
+	http *http.Client
+	// Optional platform fee (a cut taken on swaps), configured via env. Jupiter
+	// charges the fee in the OUTPUT token, so feeAccount must be a token account
+	// of feeMint; we only apply the fee to swaps whose output is feeMint.
+	feeBps     int
+	feeAccount string
+	feeMint    string
+}
 
 func New() *Client {
-	return &Client{http: &http.Client{Timeout: 10 * time.Second}}
+	bps, _ := strconv.Atoi(os.Getenv("PLATFORM_FEE_BPS"))
+	return &Client{
+		http:       &http.Client{Timeout: 10 * time.Second},
+		feeBps:     bps,
+		feeAccount: os.Getenv("PLATFORM_FEE_ACCOUNT"),
+		feeMint:    os.Getenv("PLATFORM_FEE_MINT"),
+	}
 }
 
 type quoteResp struct {
