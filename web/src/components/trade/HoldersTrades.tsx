@@ -250,7 +250,7 @@ export function HoldersTrades({ token }: { token: TokenDetail }) {
   const [tab, setTab] = useState<Tab>("trades");
 
   return (
-    <div className="flex flex-col flex-1 min-h-[55vh] lg:min-h-0">
+    <div className="flex flex-col flex-1 min-h-0">
       <div className="shrink-0 flex items-center gap-1 px-3 h-11 border-b border-line bg-ink">
         {(
           [
