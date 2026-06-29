@@ -70,6 +70,13 @@ web/src/
     format.ts          # price/number/time formatting
 ```
 
+## Engineering
+
+For the full end-to-end design — system architecture, the cache-first /
+poller-driven backend, the websocket hub, data-source routing, swap + position
+flows, the security model, and the expansion roadmap — see
+**[ENGINEERING.md](ENGINEERING.md)**.
+
 ## Brand
 
 Assets live in `../ChadWallet/` (logo, app screenshots, demo video) and are copied
@@ -82,5 +89,5 @@ into `web/public/brand/`. Two surfaces: a blue→teal→green marketing gradient
 - [x] Landing page (required) — banners, Privy sign-in, store links
 - [x] Trading page (bonus) — 3-column, chart, holders/trades, buy/sell + position
 - [x] Mock data layer + live-client seam; production build passes
-- [ ] Go backend (BirdEye/Jupiter/Alchemy) + live swap execution
-- [ ] Deploy (Vercel + backend)
+- [x] Go backend (DexScreener · GeckoTerminal · Jupiter · Helius · PumpPortal) + live, non-custodial swap execution
+- [x] Deploy (Vercel + Fly) — see [ENGINEERING.md](ENGINEERING.md)
