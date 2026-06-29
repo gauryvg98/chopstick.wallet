@@ -72,19 +72,26 @@ function K({ children }: { children: ReactNode }) {
   );
 }
 
-const DIAGRAM = `┌─────────────────────────────┐         ┌──────────────────────────────────────┐
-│  Browser (Next.js / React)  │  REST   │        Go API  (Fly.io)              │
-│  ApiClient ─────────────────┼────────▶│  httpapi (chi)                       │
-│  SWR hooks                  │   WS    │    │                                 │
-│  per-mint price store       │◀────────┼─ ws.Hub ── prices · candles ·        │
-│  Privy embedded wallet      │  push   │    │          discover · trades      │
-│  lightweight-charts         │         │  composite / freedata Provider       │
-└─────────────────────────────┘         │  cache (TTL) · breaker · metrics     │
-           ▲  sign tx (MPC)             │  discovery universe (PumpPortal)     │
-           │                            └───────────────┬──────────────────────┘
-  Privy (login + key shares)                            │  background pollers
-                                                        ▼
-      DexScreener · GeckoTerminal · Jupiter · Helius RPC · PumpPortal · pump.fun`;
+/** A rendered Mermaid flowchart (vector, transparent bg, brand-themed) from the
+ *  design-docs. Horizontally scrollable on narrow screens so it stays legible. */
+function Diagram({ src, alt, caption }: { src: string; alt: string; caption?: string }) {
+  return (
+    <figure className="rounded-2xl border border-line bg-ink-2/40 p-3 sm:p-4">
+      <div className="overflow-x-auto scroll-thin">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt={alt}
+          loading="lazy"
+          className="h-auto w-full min-w-[680px]"
+        />
+      </div>
+      {caption && (
+        <figcaption className="mt-2 text-center text-xs text-faint">{caption}</figcaption>
+      )}
+    </figure>
+  );
+}
 
 const NAV = [
   ["overview", "Overview"],
@@ -151,9 +158,16 @@ export function EngineeringView() {
                 snapshot; and a <strong className="text-white/90">websocket hub</strong> fans one upstream fetch
                 out to every viewer. So 1 user and 1,000 users put nearly the same load on upstreams.
               </p>
-              <pre className="overflow-x-auto rounded-2xl border border-line bg-ink-2/80 p-4 text-[11px] leading-snug text-muted/90 font-mono scroll-thin">
-                {DIAGRAM}
-              </pre>
+              <Diagram
+                src="/brand/diagrams/01-system-overview.svg"
+                alt="ChadWallet system overview — browser, Go API, websocket hub, and free upstreams"
+                caption="System overview — browser ⇄ Go API (REST + websocket) ⇄ free Solana upstreams."
+              />
+              <Diagram
+                src="/brand/diagrams/02-cache-first-fanout.svg"
+                alt="Cache-first, poller-driven fan-out — pollers are the only path to upstreams"
+                caption="Cache-first fan-out — background pollers are the only path to the rate-limited upstreams; readers serve warm snapshots."
+              />
             </Section>
 
             {/* FRONTEND */}
@@ -241,6 +255,11 @@ export function EngineeringView() {
                   The hub keeps a warm set always priced — owned tokens first, then trending + Big caps — plus
                   any mint a client subscribes to (refcounted). Batch-fetched from Jupiter, pushed as deltas.
                 </Card>
+                <Diagram
+                  src="/brand/diagrams/03-websocket-hub.svg"
+                  alt="WebSocket hub + per-mint live-price store — refcounted subscriptions, one batch fetch per tick"
+                  caption="WebSocket hub — refcounted per-mint subscriptions (one upstream call per mint regardless of viewers) → a per-mint store that re-renders only the rows that changed."
+                />
                 <Card title="Charts / OHLCV">
                   History (1m+) from GeckoTerminal, cache-warmed per open chart; the live candle is sampled and
                   streamed, reconciled against the previous close so the forming bar never teleports.
@@ -252,6 +271,11 @@ export function EngineeringView() {
                   </span>
                   <span className="block mt-1.5">The server never holds keys and never signs.</span>
                 </Card>
+                <Diagram
+                  src="/brand/diagrams/04-noncustodial-swap.svg"
+                  alt="Non-custodial swap sequence — built server-side, signed in the browser, broadcast server-side"
+                  caption="Non-custodial swap — built server-side, signed only in the browser by the Privy MPC wallet, broadcast + confirmed (with idempotent rebroadcast) server-side."
+                />
                 <Card title="Positions / PnL">
                   Reconstructed from on-chain swap history: running-average cost basis, realized PnL = proceeds
                   − average cost of tokens sold. All in SOL, shown in $ at live rates. No database.
