@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useToken } from "@/lib/api/hooks";
 import { useActiveToken } from "@/lib/activeToken";
-import { TrendingList } from "./TrendingList";
 import { TokenHeader } from "./TokenHeader";
 import { ChartCard } from "./ChartCard";
 import { HoldersTrades } from "./HoldersTrades";
@@ -47,10 +46,6 @@ export function TradeWorkspace({ address }: { address: string }) {
   const settled = useDebouncedValue(display, 200);
   // Feed follows the *settled* token so flicking past tokens doesn't fetch feeds.
   const { data: token } = useToken(settled);
-  // Mobile-only: the trending list is collapsed by default so it isn't always
-  // taking up the screen; a labelled bar toggles it open. Desktop uses the
-  // persistent sidebar and is unaffected.
-  const [trendingOpen, setTrendingOpen] = useState(false);
 
   return (
     <div className="flex flex-col h-full overflow-y-auto lg:overflow-hidden scroll-thin lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:grid-rows-[auto_auto_minmax(0,1fr)]">
@@ -71,44 +66,10 @@ export function TradeWorkspace({ address }: { address: string }) {
         <ChartCard address={settled} />
       </div>
 
-      {/* Trending — mobile only (desktop has the persistent sidebar). Collapsed
-          by default behind a labelled bar so it isn't always in the way; tap to
-          open. Sits right after the chart so it's one tap from any token. */}
-      <div className="order-4 lg:hidden border-y border-line">
-        <button
-          onClick={() => setTrendingOpen((o) => !o)}
-          aria-expanded={trendingOpen}
-          className="flex w-full items-center justify-between px-4 h-12 bg-ink text-sm font-bold text-white"
-        >
-          <span className="inline-flex items-center gap-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-chad animate-pulse" />
-            Trending tokens
-          </span>
-          <svg
-            viewBox="0 0 24 24"
-            className={`h-4 w-4 text-muted transition-transform duration-200 ${
-              trendingOpen ? "rotate-180" : ""
-            }`}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M6 9l6 6 6-6" />
-          </svg>
-        </button>
-        {trendingOpen && (
-          <div className="h-[420px] border-t border-line">
-            <TrendingList activeAddress={display} />
-          </div>
-        )}
-      </div>
-
       {/* Holders / trades feed. Desktop: scrolls within its grid row. Mobile:
           capped height with its own internal scroll, so it can't run away into an
-          endless page scroll. */}
-      <div className="order-5 flex flex-col h-[70vh] lg:h-auto lg:min-h-0 lg:col-start-1 lg:row-start-3">
+          endless page scroll. (Trending lives in the header-hamburger drawer.) */}
+      <div className="order-4 flex flex-col h-[70vh] lg:h-auto lg:min-h-0 lg:col-start-1 lg:row-start-3">
         {token ? (
           <HoldersTrades token={token} />
         ) : (

@@ -24,9 +24,11 @@ const NAV: { key: Nav; label: string }[] = [
  * "Tokens" is the live list, the others are previews. A « button collapses the
  * whole panel (the workspace grid resizes to fill it).
  */
-export function TradeSidebar() {
+export function TradeSidebar({ onCollapse }: { onCollapse?: () => void }) {
   const { address } = useActiveToken();
   const { toggle } = useSidebar();
+  // Desktop: « collapses the panel. Mobile drawer passes onCollapse to close it.
+  const collapse = onCollapse ?? toggle;
   const [nav, setNav] = useState<Nav>("tokens");
 
   return (
@@ -48,7 +50,7 @@ export function TradeSidebar() {
           ))}
         </div>
         <button
-          onClick={toggle}
+          onClick={collapse}
           title="Collapse panel"
           aria-label="Collapse panel"
           className="shrink-0 grid h-6 w-6 place-items-center rounded-md text-muted hover:text-white hover:bg-white/5 transition-colors"
