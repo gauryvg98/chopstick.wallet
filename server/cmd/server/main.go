@@ -148,14 +148,21 @@ func main() {
 		fp.SetPumpfun(pf)
 		fp.SetLookup(universe.Get)
 
-		// Resolve pump.fun logos for the New/Graduating feeds (off the hot path).
-		universe.SetLogoResolver(func(mint string) (string, bool) {
-			if t, e := pf.Coin(ctx, mint); e == nil && t.LogoURI != nil && *t.LogoURI != "" {
-				return *t.LogoURI, true
+		// Backfill pump.fun metadata for the New/Graduating feeds (off the hot
+		// path). Graduation events carry only the mint, so without this the
+		// Graduating tab would show blank names + $0 market caps.
+		universe.SetResolver(func(mint string) (discovery.Meta, bool) {
+			t, e := pf.Coin(ctx, mint)
+			if e != nil {
+				return discovery.Meta{}, false
 			}
-			return "", false
+			m := discovery.Meta{Symbol: t.Symbol, Name: t.Name, MarketCap: t.MarketCap}
+			if t.LogoURI != nil {
+				m.Logo = *t.LogoURI
+			}
+			return m, m.Symbol != "" || m.Name != "" || m.Logo != ""
 		})
-		go universe.EnrichLogos(ctx)
+		go universe.EnrichMeta(ctx)
 
 		// Live price line: sample pump.fun price for viewed bonding-curve tokens
 		// (keyless). Real bonding-curve trades need a funded PumpPortal key, so

@@ -16,24 +16,36 @@ const (
 	maxGrad = 40
 )
 
+// Meta is the pump.fun-resolved data we backfill onto discovery tokens whose
+// stream events arrived without it. Graduation events in particular carry only
+// the mint — no symbol/name/market cap — so without this they'd render blank.
+type Meta struct {
+	Symbol    string
+	Name      string
+	MarketCap float64
+	Logo      string
+}
+
 type Universe struct {
 	mu   sync.Mutex
 	news []types.DiscoveryToken
 	grad []types.DiscoveryToken
 
-	// logo enrichment: pump.fun tokens arrive without an image, so we resolve it
-	// lazily (once per mint) off the hot path and cache it here.
-	images  map[string]string         // mint -> logo URL
-	tried   map[string]bool           // mint -> already attempted (success or not)
-	resolve func(string) (string, bool) // injected (pump.fun lookup)
+	// metadata enrichment: pump.fun tokens (esp. graduations) arrive missing
+	// fields, so we resolve them lazily (once per mint) off the hot path and
+	// cache them here.
+	meta    map[string]Meta          // mint -> resolved metadata
+	tried   map[string]bool          // mint -> already attempted (success or not)
+	resolve func(string) (Meta, bool) // injected (pump.fun lookup)
 }
 
 func New() *Universe {
-	return &Universe{images: map[string]string{}, tried: map[string]bool{}}
+	return &Universe{meta: map[string]Meta{}, tried: map[string]bool{}}
 }
 
-// SetLogoResolver wires the function used to fetch a token's logo (pump.fun).
-func (u *Universe) SetLogoResolver(fn func(string) (string, bool)) {
+// SetResolver wires the function used to backfill a token's metadata
+// (symbol/name/market cap/logo) from pump.fun.
+func (u *Universe) SetResolver(fn func(string) (Meta, bool)) {
 	u.mu.Lock()
 	u.resolve = fn
 	u.mu.Unlock()
@@ -86,32 +98,46 @@ func (u *Universe) Get(mint string) (types.DiscoveryToken, bool) {
 }
 
 // Snapshot returns copies of the current new + graduating feeds, with any
-// resolved logos filled in.
+// resolved metadata (logo/symbol/name/market cap) filled in.
 func (u *Universe) Snapshot() (news, grad []types.DiscoveryToken) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
-	news = u.withLogos(u.news)
-	grad = u.withLogos(u.grad)
+	news = u.withMeta(u.news)
+	grad = u.withMeta(u.grad)
 	return news, grad
 }
 
-func (u *Universe) withLogos(in []types.DiscoveryToken) []types.DiscoveryToken {
+// withMeta backfills any field the stream event didn't carry from the resolved
+// pump.fun metadata cache — only filling what's actually missing.
+func (u *Universe) withMeta(in []types.DiscoveryToken) []types.DiscoveryToken {
 	out := make([]types.DiscoveryToken, len(in))
 	copy(out, in)
 	for i := range out {
-		if out[i].LogoURI == nil {
-			if logo, ok := u.images[out[i].Address]; ok && logo != "" {
-				l := logo
-				out[i].LogoURI = &l
-			}
+		m, ok := u.meta[out[i].Address]
+		if !ok {
+			continue
+		}
+		if out[i].LogoURI == nil && m.Logo != "" {
+			l := m.Logo
+			out[i].LogoURI = &l
+		}
+		if out[i].Symbol == "" && m.Symbol != "" {
+			out[i].Symbol = m.Symbol
+		}
+		if out[i].Name == "" && m.Name != "" {
+			out[i].Name = m.Name
+		}
+		if out[i].MarketCap == 0 && m.MarketCap > 0 {
+			out[i].MarketCap = m.MarketCap
 		}
 	}
 	return out
 }
 
-// EnrichLogos resolves missing pump.fun logos a few at a time, off the request
-// path, so the New/Graduating feeds show real meme images instead of initials.
-func (u *Universe) EnrichLogos(ctx context.Context) {
+// EnrichMeta resolves missing pump.fun metadata (logo/symbol/name/market cap) a
+// few mints at a time, off the request path, so the New/Graduating feeds show
+// real names + images + caps instead of blanks.
+func (u *Universe) EnrichMeta(ctx context.Context) {
 	t := time.NewTicker(700 * time.Millisecond)
 	defer t.Stop()
 	for {
@@ -147,7 +173,7 @@ func (u *Universe) enrichOnce(ctx context.Context) {
 	for m := range u.tried {
 		if !live[m] {
 			delete(u.tried, m)
-			delete(u.images, m)
+			delete(u.meta, m)
 		}
 	}
 	u.mu.Unlock()
@@ -156,9 +182,9 @@ func (u *Universe) enrichOnce(ctx context.Context) {
 		if ctx.Err() != nil {
 			return
 		}
-		if logo, ok := resolve(mint); ok && logo != "" {
+		if m, ok := resolve(mint); ok {
 			u.mu.Lock()
-			u.images[mint] = logo
+			u.meta[mint] = m
 			u.mu.Unlock()
 		}
 	}
