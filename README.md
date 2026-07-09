@@ -1,4 +1,4 @@
-# ChadWallet — Web
+# ChopstickWallet — Web
 
 A fomo.family-style landing page **+ a full Solana trading app** for ChadWallet
 ("the #1 meme coin trading app on Solana"). Built for the Founding Engineer screen.
