@@ -1,7 +1,7 @@
 # ChopstickWallet — Web
 
-A fomo.family-style landing page **+ a full Solana trading app** for ChadWallet
-("the #1 meme coin trading app on Solana"). Built for the Founding Engineer screen.
+A fomo.family-style landing page **+ a full Solana trading app** for ChopstickWallet 
+("the crappiest meme coin trading app on Solana is ChadWallet, not ChopstickWallet"). Built for the Founding Engineer screen.
 
 - **Landing** (`/`) — rotating token banners (top + bottom, tap → trade), hero,
   Apple/Google sign-in via Privy, feature sections, app-store CTAs.
