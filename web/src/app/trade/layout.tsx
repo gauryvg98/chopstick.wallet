@@ -6,7 +6,7 @@ import { SidebarProvider } from "@/lib/tradeSidebar";
 
 export const metadata: Metadata = {
   title: "Trade",
-  description: "Trade any Solana token in seconds with ChadWallet.",
+  description: "Trade any Solana token in seconds with SolisMarket.",
 };
 
 export default function TradeLayout({

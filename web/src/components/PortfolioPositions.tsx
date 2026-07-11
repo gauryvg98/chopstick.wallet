@@ -216,7 +216,7 @@ function ActivityRow({ item, solPrice }: { item: ActivityItem; solPrice: number 
           }}
         />
       ) : (
-        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-chad to-teal grid place-items-center text-ink text-sm font-bold shrink-0">
+        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-solis to-teal grid place-items-center text-ink text-sm font-bold shrink-0">
           ◎
         </div>
       )}
@@ -273,7 +273,7 @@ function PnlStat({
     <div
       className={cn(
         "rounded-2xl border bg-surface/60 px-3 py-3",
-        primary ? "border-chad/40" : "border-line"
+        primary ? "border-solis/40" : "border-line"
       )}
     >
       <div className="flex items-center justify-between gap-1">

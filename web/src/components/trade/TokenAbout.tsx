@@ -60,7 +60,7 @@ function Description({ text }: { text: string }) {
       {long && (
         <button
           onClick={() => setOpen((o) => !o)}
-          className="mt-0.5 text-chad font-semibold hover:underline"
+          className="mt-0.5 text-solis font-semibold hover:underline"
         >
           {open ? "Show less" : "Read more"}
         </button>

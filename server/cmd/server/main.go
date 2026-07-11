@@ -1,4 +1,4 @@
-// Command server is the ChadWallet backend: a small REST API that powers the
+// Command server is the SolisMarket backend: a small REST API that powers the
 // frontend with Solana market data and swap quotes. It runs on free, keyless
 // sources by default (DexScreener + GeckoTerminal + Jupiter, plus Helius for
 // holders if a key is set), with a background poller so upstream calls scale
@@ -17,20 +17,20 @@ import (
 	"sync/atomic"
 	"time"
 
-	"chadwallet/server/internal/cache"
-	"chadwallet/server/internal/discovery"
-	"chadwallet/server/internal/freedata"
-	"chadwallet/server/internal/helius"
-	"chadwallet/server/internal/httpapi"
-	"chadwallet/server/internal/jupiter"
-	"chadwallet/server/internal/livetrades"
-	"chadwallet/server/internal/metrics"
-	"chadwallet/server/internal/mockdata"
-	"chadwallet/server/internal/provider"
-	"chadwallet/server/internal/pumpfun"
-	"chadwallet/server/internal/pumpportal"
-	"chadwallet/server/internal/types"
-	"chadwallet/server/internal/ws"
+	"solismarket/server/internal/cache"
+	"solismarket/server/internal/discovery"
+	"solismarket/server/internal/freedata"
+	"solismarket/server/internal/helius"
+	"solismarket/server/internal/httpapi"
+	"solismarket/server/internal/jupiter"
+	"solismarket/server/internal/livetrades"
+	"solismarket/server/internal/metrics"
+	"solismarket/server/internal/mockdata"
+	"solismarket/server/internal/provider"
+	"solismarket/server/internal/pumpfun"
+	"solismarket/server/internal/pumpportal"
+	"solismarket/server/internal/types"
+	"solismarket/server/internal/ws"
 )
 
 const solMint = "So11111111111111111111111111111111111111112"
@@ -287,7 +287,7 @@ func main() {
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
-	log.Printf("ChadWallet API listening on :%s (CORS: %s)", port, allowed)
+	log.Printf("SolisMarket API listening on :%s (CORS: %s)", port, allowed)
 	if err := httpServer.ListenAndServe(); err != nil {
 		log.Fatalf("server error: %v", err)
 	}

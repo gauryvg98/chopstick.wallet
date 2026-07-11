@@ -161,8 +161,8 @@ export function StatusView() {
               </p>
             </div>
             <div className="text-right">
-              <span className="inline-flex items-center gap-2 text-sm font-semibold text-chad">
-                <span className="h-2 w-2 rounded-full bg-chad animate-pulse" />
+              <span className="inline-flex items-center gap-2 text-sm font-semibold text-solis">
+                <span className="h-2 w-2 rounded-full bg-solis animate-pulse" />
                 Live
               </span>
               {data && (

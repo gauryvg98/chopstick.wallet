@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
-import { StoreButtons } from "@/components/StoreButtons";
 
 export function SocialProof() {
   return (
@@ -10,11 +9,11 @@ export function SocialProof() {
         {[680, 520, 360, 220].map((s, i) => (
           <div
             key={s}
-            className="absolute rounded-full border border-chad/15"
+            className="absolute rounded-full border border-solis/15"
             style={{ width: s, height: s, opacity: 0.6 - i * 0.1 }}
           />
         ))}
-        <div className="absolute h-72 w-72 rounded-full bg-chad/20 blur-[100px]" />
+        <div className="absolute h-72 w-72 rounded-full bg-solis/20 blur-[100px]" />
 
         {/* real tokens orbiting the rings — outer container spins (token rides the
             ring), inner counter-spins so the logo stays upright. Negative delays
@@ -54,7 +53,7 @@ export function SocialProof() {
             loop
             playsInline
             preload="auto"
-            aria-label="ChadWallet app demo"
+            aria-label="SolisMarket app demo"
             className="block h-[400px] sm:h-[480px] lg:h-[540px] w-auto rounded-[2rem] border border-line-2 shadow-2xl bg-ink ring-1 ring-white/5"
           />
         </div>
@@ -62,20 +61,19 @@ export function SocialProof() {
         {/* Pitch + get-the-app */}
         <div className="text-center lg:text-left">
           <h2 className="font-display font-bold text-4xl sm:text-6xl tracking-tight lowercase">
-            built for chads.
+            built for degens.
             <br />
             not quants.
           </h2>
           <p className="mt-5 text-lg text-muted">
             Join <span className="text-white font-bold">500k+</span> traders making
-            their name on ChadWallet.
+            their name on SolisMarket.
           </p>
 
           <div className="mt-8 flex flex-col items-center lg:items-start gap-5">
             <Link href="/trade">
               <Button size="lg">Start trading</Button>
             </Link>
-            <StoreButtons className="justify-center lg:justify-start" />
           </div>
         </div>
       </div>

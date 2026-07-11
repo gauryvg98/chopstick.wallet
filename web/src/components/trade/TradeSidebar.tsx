@@ -71,7 +71,7 @@ export function TradeSidebar({ onCollapse }: { onCollapse?: () => void }) {
 function SoonPanel({ nav }: { nav: Nav }) {
   const copy: Record<Exclude<Nav, "tokens">, { icon: string; line: string }> = {
     alerts: { icon: "🔔", line: "Whale & price alerts are coming soon." },
-    leaderboard: { icon: "🏆", line: "The Chad Board leaderboard is coming soon." },
+    leaderboard: { icon: "🏆", line: "The Solis Board leaderboard is coming soon." },
     feed: { icon: "📡", line: "The smart-money feed is coming soon." },
   };
   const c = copy[nav as Exclude<Nav, "tokens">];

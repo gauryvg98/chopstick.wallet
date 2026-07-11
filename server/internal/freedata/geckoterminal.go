@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"chadwallet/server/internal/types"
+	"solismarket/server/internal/types"
 )
 
 // pickPrice returns whichever of a/b is closer to ref (the token's reference

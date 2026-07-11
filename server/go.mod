@@ -1,4 +1,4 @@
-module chadwallet/server
+module solismarket/server
 
 go 1.25.1
 

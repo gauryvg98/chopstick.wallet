@@ -1,5 +1,4 @@
 import { Logo } from "@/components/Logo";
-import { APP_STORE_URL, PLAY_STORE_URL } from "@/components/StoreButtons";
 
 const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
   {
@@ -8,16 +7,9 @@ const COLUMNS: { title: string; links: { label: string; href: string }[] }[] = [
       { label: "Trade", href: "/trade" },
       { label: "Portfolio", href: "/portfolio" },
       { label: "Features", href: "/#features" },
-      { label: "Chad Board", href: "/#leaderboard" },
+      { label: "Solis Board", href: "/#leaderboard" },
       { label: "Engineering", href: "/engineering" },
       { label: "System status", href: "/status" },
-    ],
-  },
-  {
-    title: "Get the app",
-    links: [
-      { label: "iOS", href: APP_STORE_URL },
-      { label: "Android", href: PLAY_STORE_URL },
     ],
   },
   {
@@ -62,7 +54,7 @@ export function Footer() {
           ))}
         </div>
         <div className="mt-12 pt-6 border-t border-line/60 flex flex-col sm:flex-row justify-between gap-3 text-xs text-faint">
-          <span>© {new Date().getFullYear()} Chad Wallet L.L.C. All rights reserved.</span>
+          <span>© {new Date().getFullYear()} Solis Wallet L.L.C. All rights reserved.</span>
           <span>Crypto trading involves risk. Not financial advice. Trade responsibly.</span>
         </div>
       </div>

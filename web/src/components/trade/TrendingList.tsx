@@ -143,7 +143,7 @@ function NewRow({ t, active }: { t: DiscoveryToken; active: boolean }) {
           {formatCompactUsd(t.marketCap)}{" "}
           <span className="text-[10px] font-medium text-faint">MC</span>
         </div>
-        <div className="text-[11px] text-chad tnum font-semibold mt-0.5">
+        <div className="text-[11px] text-solis tnum font-semibold mt-0.5">
           {timeAgo(t.createdAt)} old
         </div>
       </div>
@@ -201,7 +201,7 @@ export function TrendingList({ activeAddress }: { activeAddress: string }) {
               : "text-muted hover:text-white"
           )}
         >
-          <span className="text-chad">★</span> Watchlist
+          <span className="text-solis">★</span> Watchlist
         </button>
         <button
           onClick={() => setTab("trending")}
@@ -235,7 +235,7 @@ export function TrendingList({ activeAddress }: { activeAddress: string }) {
               : "text-muted hover:text-white"
           )}
         >
-          <span className="h-1.5 w-1.5 rounded-full bg-chad animate-pulse" />
+          <span className="h-1.5 w-1.5 rounded-full bg-solis animate-pulse" />
           New
         </button>
         <button

@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"chadwallet/server/internal/types"
+	"solismarket/server/internal/types"
 )
 
 // lite-api is Jupiter's free, keyless tier.

@@ -10,7 +10,7 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"chadwallet/server/internal/types"
+	"solismarket/server/internal/types"
 )
 
 const wsURL = "wss://pumpportal.fun/api/data"

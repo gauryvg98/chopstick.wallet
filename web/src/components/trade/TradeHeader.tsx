@@ -26,12 +26,12 @@ export function TradeHeader() {
         href="/"
         className="hidden sm:block font-display font-bold text-white text-lg tracking-tight"
       >
-        ChadWallet
+        SolisMarket
       </Link>
       <span
         className={`hidden md:inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
           IS_LIVE
-            ? "text-chad border-chad/40 bg-chad/10"
+            ? "text-solis border-solis/40 bg-solis/10"
             : "text-amber-300 border-amber-300/30 bg-amber-300/10"
         }`}
       >

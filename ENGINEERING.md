@@ -1,4 +1,4 @@
-# ChadWallet — Engineering Design
+# SolisMarket — Engineering Design
 
 End-to-end design of the platform: how it's built, what it uses internally, the
 key data flows, the security model, and how we plan to expand.

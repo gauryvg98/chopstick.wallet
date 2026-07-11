@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"chadwallet/server/internal/types"
+	"solismarket/server/internal/types"
 )
 
 type dexClient struct {

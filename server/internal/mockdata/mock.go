@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"chadwallet/server/internal/types"
+	"solismarket/server/internal/types"
 )
 
 type seed struct {
@@ -38,14 +38,14 @@ var seeds = []seed{
 	{"WENWENvqqNya429ubCdR81ZmD69brwQaaBYY6p3LCpk", "WEN", "Wen", 0.00013, 14.2, 2.7, 49_000_000, 6_400_000, 12_000_000},
 	{"HZ1JovNiVvGrGNiiYvEozEVgZ58xaU3RKwX8eACQBCt3", "PYTH", "Pyth Network", 0.41, 1.4, 0.08, 1_480_000_000, 22_000_000, 31_000_000},
 	{"jtojtomepa8beP8AuQc6eXt5FriJwfFMwQx2v2f9mCL", "JTO", "Jito", 2.18, -2.3, 0.22, 540_000_000, 17_000_000, 24_000_000},
-	{"CHADxXo3Vj6Jpr8h7uWNb6gV9CzMy3zJ6fy2rqC8gW1k", "GIGA", "Gigachad", 0.0412, 41.2, 6.4, 410_000_000, 11_000_000, 38_000_000},
+	{"SoLixXo3Vj6Jpr8h7uWNb6gV9CzMy3zJ6fy2rqC8gW1k", "GIGA", "Solking", 0.0412, 41.2, 6.4, 410_000_000, 11_000_000, 38_000_000},
 	{"TROLLwpHQjP1xQ8jvKpQ4mD8gV2yC5n9aZ7bXr3kU4j", "TROLL", "Troll", 0.062, 18.4, -2.1, 62_000_000, 4_900_000, 9_400_000},
 	{"MoonkCat9aZ7bXr3kU4jHQjP1xQ8jvKpQ4mD8gV2yC5n", "MCAT", "Monkey Cat", 0.0228, -11.3, -3.4, 22_000_000, 2_100_000, 5_600_000},
 	{"LoLxBmvKpQ4mD8gV2yC5n9aZ7bXr3kU4jHQjP1xQ8jv", "LOL", "LMAO Coin", 0.0000915, 67.8, 9.2, 9_100_000, 1_400_000, 4_200_000},
 }
 
 var traderLabels = []string{
-	"Roman 尺", "Zrool 尺", "Cupsey", "Esee", "GiganticChad", "deepfuckingvalue",
+	"Roman 尺", "Zrool 尺", "Cupsey", "Esee", "SolLord", "deepfuckingvalue",
 	"moonboy.sol", "ansem", "cented", "Pow", "Mr. Frog", "Euris",
 }
 

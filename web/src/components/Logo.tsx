@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 
-/** ChadWallet logo mark + optional wordmark. */
+/** SolisMarket logo mark + optional wordmark. */
 export function Logo({
   size = 32,
   withWordmark = true,
@@ -16,16 +16,15 @@ export function Logo({
   variant?: "dark" | "light";
   className?: string;
 }) {
-  // logo-dark.png = white mark on black (for dark backgrounds)
-  // logo-light.png = black mark on white (for light backgrounds)
-  const src = variant === "dark" ? "/brand/logo-dark.png" : "/brand/logo-light.png";
+  // logo-mark.svg = gold orbit badge; reads on any background.
+  const src = "/brand/logo-mark.svg";
   const wordColor = variant === "dark" ? "text-white" : "text-ink";
 
   const inner = (
     <span className={cn("inline-flex items-center gap-2", className)}>
       <Image
         src={src}
-        alt="ChadWallet"
+        alt="SolisMarket"
         width={size}
         height={size}
         className="rounded-md"
@@ -39,7 +38,7 @@ export function Logo({
           )}
           style={{ fontSize: size * 0.62 }}
         >
-          ChadWallet
+          SolisMarket
         </span>
       )}
     </span>
@@ -47,7 +46,7 @@ export function Logo({
 
   if (href === null) return inner;
   return (
-    <Link href={href} aria-label="ChadWallet home" className="shrink-0">
+    <Link href={href} aria-label="SolisMarket home" className="shrink-0">
       {inner}
     </Link>
   );

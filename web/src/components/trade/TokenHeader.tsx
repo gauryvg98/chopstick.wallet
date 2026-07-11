@@ -26,7 +26,7 @@ function IconAction({
 }) {
   const cls = cn(
     "grid h-6 w-6 place-items-center rounded-md border border-line bg-surface-2 text-[12px] transition-colors",
-    active ? "text-chad border-chad/40" : "text-muted hover:text-white hover:border-line-2"
+    active ? "text-solis border-solis/40" : "text-muted hover:text-white hover:border-line-2"
   );
   if (href) {
     return (
@@ -77,7 +77,7 @@ function GraduationBar({ marketCap }: { marketCap: number }) {
       </div>
       <div className="h-2 rounded-full bg-ink overflow-hidden">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-chad to-teal transition-[width] duration-500"
+          className="h-full rounded-full bg-gradient-to-r from-solis to-teal transition-[width] duration-500"
           style={{ width: `${(pct * 100).toFixed(1)}%` }}
         />
       </div>
@@ -146,7 +146,7 @@ export function TokenHeader({ address }: { address: string }) {
                 {t.name}
               </span>
               {t.bondingCurve && (
-                <span className="text-[10px] font-bold uppercase tracking-wide rounded-md bg-chad/15 text-chad px-1.5 py-0.5">
+                <span className="text-[10px] font-bold uppercase tracking-wide rounded-md bg-solis/15 text-solis px-1.5 py-0.5">
                   🌱
                 </span>
               )}

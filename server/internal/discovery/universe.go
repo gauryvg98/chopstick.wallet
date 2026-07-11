@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"chadwallet/server/internal/types"
+	"solismarket/server/internal/types"
 )
 
 const (

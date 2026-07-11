@@ -93,7 +93,7 @@ function DemoAuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(() => {
     const next: AuthUser = {
       address: fakeSolanaAddress(),
-      email: "chad@chadwallet.xyz",
+      email: "solis@solismarket.xyz",
       loginMethod: "demo",
     };
     setUser(next);
@@ -166,8 +166,8 @@ function PrivyAuthProvider({ children }: { children: React.ReactNode }) {
       config={{
         appearance: {
           theme: "dark",
-          accentColor: "#22e07b",
-          logo: "/brand/logo-dark.png",
+          accentColor: "#F5B301",
+          logo: "/brand/logo-mark.svg",
           walletChainType: "solana-only",
           showWalletLoginFirst: false,
         },

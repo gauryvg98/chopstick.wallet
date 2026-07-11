@@ -16,18 +16,18 @@ const spaceGrotesk = Space_Grotesk({
   display: "swap",
 });
 
-const SITE = "https://chadwallet.xyz";
+const SITE = "https://solis.trade";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
   title: {
-    default: "ChadWallet — The #1 meme coin trading app on Solana",
-    template: "%s · ChadWallet",
+    default: "SolisMarket — The #1 meme coin trading app on Solana",
+    template: "%s · SolisMarket",
   },
   description:
     "Find the next 100x memecoins. Trade any Solana token in seconds, follow top traders, and never miss the next breakout. Sign in with Apple or Google.",
   keywords: [
-    "ChadWallet",
+    "SolisMarket",
     "Solana",
     "memecoin",
     "crypto trading",
@@ -35,21 +35,21 @@ export const metadata: Metadata = {
     "self-custody wallet",
   ],
   openGraph: {
-    title: "ChadWallet — The #1 meme coin trading app on Solana",
+    title: "SolisMarket — The #1 meme coin trading app on Solana",
     description:
       "Find the next 100x memecoins. Trade any Solana token in seconds. Never miss the next breakout.",
     url: SITE,
-    siteName: "ChadWallet",
+    siteName: "SolisMarket",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "ChadWallet — The #1 meme coin trading app on Solana",
+    title: "SolisMarket — The #1 meme coin trading app on Solana",
     description:
       "Find the next 100x memecoins. Trade any Solana token in seconds.",
   },
   icons: {
-    icon: "/brand/logo-dark.png",
+    icon: "/brand/logo-mark.svg",
   },
 };
 

@@ -42,7 +42,7 @@ export function ChartCard({
               className={cn(
                 "px-3 h-7 rounded-lg text-xs font-bold transition-colors shrink-0",
                 t === tf
-                  ? "bg-chad text-ink"
+                  ? "bg-solis text-ink"
                   : "text-muted hover:text-white hover:bg-white/5"
               )}
             >
@@ -63,7 +63,7 @@ export function ChartCard({
               onClick={() => setMetric(m)}
               className={cn(
                 "px-2 h-6 rounded-md text-[11px] font-bold transition-colors",
-                m === metric ? "bg-chad text-ink" : "text-muted hover:text-white"
+                m === metric ? "bg-solis text-ink" : "text-muted hover:text-white"
               )}
             >
               {label}
@@ -79,7 +79,7 @@ export function ChartCard({
               aria-label={k === "candle" ? "Candlestick" : "Line"}
               className={cn(
                 "px-2 h-6 rounded-md text-xs font-bold transition-colors",
-                k === kind ? "bg-chad text-ink" : "text-muted hover:text-white"
+                k === kind ? "bg-solis text-ink" : "text-muted hover:text-white"
               )}
             >
               {k === "candle" ? "📊" : "📈"}

@@ -3,7 +3,6 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/Button";
-import { StoreButtons } from "@/components/StoreButtons";
 import { useBanner } from "@/lib/api/hooks";
 import { TokenAvatar } from "@/components/ui/TokenAvatar";
 import { PriceText } from "@/components/ui/PriceText";
@@ -40,19 +39,19 @@ export function Hero() {
         {/* Left */}
         <div>
           <span className="inline-flex items-center gap-2 rounded-full bg-white/5 border border-white/10 px-3 py-1.5 text-xs font-bold text-white">
-            <span className="h-2 w-2 rounded-full bg-chad animate-pulse" />
+            <span className="h-2 w-2 rounded-full bg-solis animate-pulse" />
             #1 meme coin trading app on Solana
           </span>
 
           <h1 className="mt-5 font-display font-bold tracking-tight text-white text-5xl sm:text-6xl lg:text-7xl leading-[0.92] lowercase">
             where degens
             <br />
-            become chads.
+            catch the sun.
           </h1>
 
           <p className="mt-5 text-lg sm:text-xl text-muted max-w-md font-medium">
             Every memecoin, every viral token on Solana — buy in one tap, then
-            flex it on the Chad Board.
+            flex it on the Solis Board.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -61,24 +60,21 @@ export function Hero() {
             </Link>
           </div>
 
-          <div className="mt-6">
-            <StoreButtons />
-          </div>
         </div>
 
-        {/* Right — the Chad floating in the cosmos (fomo's astronaut analog).
-            mascot.png is the logo with a transparent background, so it floats
+        {/* Right — the Solis floating in the cosmos (fomo's astronaut analog).
+            mascot.svg is a transparent gold orbit mark, so it floats
             cleanly over the starfield. */}
         <div className="relative flex justify-center md:justify-end">
-          <div className="pointer-events-none absolute inset-0 m-auto h-80 w-80 rounded-full bg-chad/25 blur-[90px]" />
+          <div className="pointer-events-none absolute inset-0 m-auto h-80 w-80 rounded-full bg-solis/25 blur-[90px]" />
           <div className="relative animate-[float_6s_ease-in-out_infinite]">
             <Image
-              src="/brand/mascot.png"
-              alt="ChadWallet"
+              src="/brand/mascot.svg"
+              alt="SolisMarket"
               width={420}
               height={420}
               priority
-              className="relative w-[260px] sm:w-[360px] lg:w-[420px] h-auto drop-shadow-[0_0_40px_rgba(34,224,123,0.3)]"
+              className="relative w-[260px] sm:w-[360px] lg:w-[420px] h-auto drop-shadow-[0_0_40px_rgba(245,179,1,0.3)]"
             />
             <FloatingCard tokenIndex={3} className="-left-6 top-10 hidden sm:flex" />
             <FloatingCard tokenIndex={1} className="-right-2 bottom-10 hidden sm:flex" />

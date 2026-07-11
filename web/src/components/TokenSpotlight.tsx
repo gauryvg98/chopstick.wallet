@@ -167,7 +167,7 @@ function SpotlightModal({
           </div>
           <button
             onClick={copy}
-            className="mt-1.5 w-full flex items-center justify-between gap-3 rounded-xl border border-line bg-surface-2 px-3 py-2.5 hover:border-chad/40 transition-colors group"
+            className="mt-1.5 w-full flex items-center justify-between gap-3 rounded-xl border border-line bg-surface-2 px-3 py-2.5 hover:border-solis/40 transition-colors group"
           >
             <span className="font-mono text-sm text-white truncate">
               {shortAddr(token.address, 6, 6)}
@@ -175,7 +175,7 @@ function SpotlightModal({
             <span
               className={cn(
                 "text-xs font-semibold shrink-0",
-                copied ? "text-up" : "text-muted group-hover:text-chad"
+                copied ? "text-up" : "text-muted group-hover:text-solis"
               )}
             >
               {copied ? "Copied ✓" : "Copy"}
@@ -185,7 +185,7 @@ function SpotlightModal({
           <Link
             href={`/trade/${token.address}`}
             onClick={onClose}
-            className="mt-3 block w-full text-center rounded-xl bg-chad text-ink font-bold h-11 leading-[44px] hover:brightness-105 transition"
+            className="mt-3 block w-full text-center rounded-xl bg-solis text-ink font-bold h-11 leading-[44px] hover:brightness-105 transition"
           >
             Open full chart →
           </Link>

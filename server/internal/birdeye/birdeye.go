@@ -21,8 +21,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"chadwallet/server/internal/breaker"
-	"chadwallet/server/internal/types"
+	"solismarket/server/internal/breaker"
+	"solismarket/server/internal/types"
 )
 
 const base = "https://public-api.birdeye.so"

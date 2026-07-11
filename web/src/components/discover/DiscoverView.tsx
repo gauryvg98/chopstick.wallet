@@ -28,7 +28,7 @@ function DiscoveryCard({ t }: { t: DiscoveryToken }) {
   return (
     <Link
       href={`/trade/${t.address}`}
-      className="rounded-2xl border border-line bg-surface/60 p-4 hover:border-chad/40 hover:bg-surface transition-colors block"
+      className="rounded-2xl border border-line bg-surface/60 p-4 hover:border-solis/40 hover:bg-surface transition-colors block"
     >
       <div className="flex items-center gap-3">
         <TokenAvatar
@@ -53,7 +53,7 @@ function DiscoveryCard({ t }: { t: DiscoveryToken }) {
           <div className="font-bold text-white truncate">{t.symbol}</div>
           <div className="text-xs text-muted truncate">{t.name}</div>
         </div>
-        <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-chad/15 text-chad tnum shrink-0">
+        <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-solis/15 text-solis tnum shrink-0">
           {timeAgo(t.createdAt)}
         </span>
       </div>
@@ -76,7 +76,7 @@ function TrendingCard({ t }: { t: TrendingToken }) {
   return (
     <Link
       href={`/trade/${t.address}`}
-      className="rounded-2xl border border-line bg-surface/60 p-4 hover:border-chad/40 hover:bg-surface transition-colors block"
+      className="rounded-2xl border border-line bg-surface/60 p-4 hover:border-solis/40 hover:bg-surface transition-colors block"
     >
       <div className="flex items-center gap-3">
         <TokenAvatar
@@ -140,8 +140,8 @@ export function DiscoverView() {
                 Fresh Solana launches, streamed live the moment they hit the chain.
               </p>
             </div>
-            <span className="inline-flex items-center gap-2 text-sm font-semibold text-chad">
-              <span className="h-2 w-2 rounded-full bg-chad animate-pulse" />
+            <span className="inline-flex items-center gap-2 text-sm font-semibold text-solis">
+              <span className="h-2 w-2 rounded-full bg-solis animate-pulse" />
               Live · pump.fun stream
             </span>
           </div>
@@ -155,7 +155,7 @@ export function DiscoverView() {
                 className={cn(
                   "px-4 h-10 rounded-xl text-sm font-bold transition-colors",
                   tab === t.id
-                    ? "bg-chad text-ink"
+                    ? "bg-solis text-ink"
                     : "text-muted hover:text-white"
                 )}
               >

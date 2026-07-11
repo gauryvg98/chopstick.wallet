@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* ===== ChadWallet brand system ===== */
+/* ===== SolisMarket brand system ===== */
 @theme {
   /* App (trading) surface — near-black with green accent */
   --color-ink: #0a0b0d;
@@ -13,8 +13,8 @@
   --color-faint: #5b616b;
 
   /* Brand green + market colors */
-  --color-chad: #22e07b;
-  --color-chad-dark: #15b864;
+  --color-solis: #F5B301;
+  --color-solis-dark: #d99400;
   --color-up: #22e07b;
   --color-down: #ff5247;
 
@@ -54,13 +54,13 @@
 }
 
 /* Marketing gradient backdrop: sky → teal → mint */
-.bg-chad-gradient {
+.bg-solis-gradient {
   background: linear-gradient(180deg, #3aa6f0 0%, #45c5cb 42%, #8fe6b0 100%);
 }
 /* Subtle dark radial glow for app sections */
 .bg-app-glow {
   background:
-    radial-gradient(60rem 40rem at 50% -10%, rgba(34, 224, 123, 0.12), transparent 70%),
+    radial-gradient(60rem 40rem at 50% -10%, rgba(245, 179, 1, 0.12), transparent 70%),
     var(--color-ink);
 }
 
@@ -108,7 +108,7 @@
 
 /* Live price tick flash */
 @keyframes flash-up {
-  from { background-color: rgba(34, 224, 123, 0.3); }
+  from { background-color: rgba(245, 179, 1, 0.3); }
   to { background-color: transparent; }
 }
 @keyframes flash-down {

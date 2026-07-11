@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
-	"chadwallet/server/internal/helius"
-	"chadwallet/server/internal/pumpfun"
-	"chadwallet/server/internal/types"
+	"solismarket/server/internal/helius"
+	"solismarket/server/internal/pumpfun"
+	"solismarket/server/internal/types"
 )
 
 // Provider implements provider.Provider entirely on free sources.

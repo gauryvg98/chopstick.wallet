@@ -204,7 +204,7 @@ export class MockClient implements ApiClient {
     const trending = await this.getTrending();
     const now = Date.now();
     const NAMES = [
-      "Gigachad Inu", "Solana Pepe", "Wojak Cat", "Moon Doge", "Chad Coin",
+      "Solking Inu", "Solana Pepe", "Wojak Cat", "Moon Doge", "Solis Coin",
       "Based God", "Pump King", "Degen Ape", "Rug Survivor", "Floki Sol",
       "Bonk Jr", "Sigma Frog", "Turbo Cat", "Alpha Wolf",
     ];

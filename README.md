@@ -1,6 +1,6 @@
-# ChadWallet — Web
+# SolisMarket — Web
 
-A fomo.family-style landing page **+ a full Solana trading app** for ChadWallet
+A fomo.family-style landing page **+ a full Solana trading app** for SolisMarket
 ("the #1 meme coin trading app on Solana"). Built for the Founding Engineer screen.
 
 - **Landing** (`/`) — rotating token banners (top + bottom, tap → trade), hero,
@@ -79,7 +79,7 @@ flows, the security model, and the expansion roadmap — see
 
 ## Brand
 
-Assets live in `../ChadWallet/` (logo, app screenshots, demo video) and are copied
+Assets live in `../SolisMarket/` (logo, app screenshots, demo video) and are copied
 into `web/public/brand/`. Two surfaces: a blue→teal→green marketing gradient
 (landing) and a near-black app theme with the spring-green `#22e07b` accent
 (trading).

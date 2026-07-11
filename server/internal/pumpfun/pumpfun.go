@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"chadwallet/server/internal/types"
+	"solismarket/server/internal/types"
 )
 
 const coinURL = "https://frontend-api-v3.pump.fun/coins/"
@@ -62,7 +62,7 @@ func (c *Client) Coin(ctx context.Context, mint string) (*types.TokenDetail, err
 	}
 	req.Header.Set("accept", "application/json")
 	// pump.fun's edge rejects empty UAs.
-	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; ChadWallet/1.0)")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; SolisMarket/1.0)")
 	res, err := c.http.Do(req)
 	if err != nil {
 		return nil, err

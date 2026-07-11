@@ -1,4 +1,4 @@
-# Deploying ChadWallet
+# Deploying SolisMarket
 
 Two deployables: **`web/`** (Next.js → Vercel) and **`server/`** (Go API → Fly.io).
 The app runs on mock data with **zero keys**, so you can deploy first and add real
@@ -67,7 +67,7 @@ fly launch --no-deploy        # uses fly.toml; pick an app name + region (iad)
 fly secrets set BIRDEYE_API_KEY=... ALLOWED_ORIGIN=https://<your-app>.vercel.app
 fly deploy
 ```
-Note the URL it prints (e.g. `https://chadwallet-api.fly.dev`).
+Note the URL it prints (e.g. `https://solismarket-api.fly.dev`).
 
 ### Frontend → Vercel
 ```bash

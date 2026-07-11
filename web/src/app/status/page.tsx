@@ -3,7 +3,7 @@ import { StatusView } from "@/components/StatusView";
 
 export const metadata: Metadata = {
   title: "System Status",
-  description: "Real-time latency metrics across the ChadWallet data pipeline.",
+  description: "Real-time latency metrics across the SolisMarket data pipeline.",
 };
 
 export default function StatusPage() {

@@ -143,7 +143,7 @@ export function PriceChart({
     const chg = bar.open > 0 ? ((bar.close - bar.open) / bar.open) * 100 : 0;
     const v = (n: number) => `<span style="color:${col}">${fmtVal(n, m)}</span>`;
     el.innerHTML =
-      `<span style="color:#6b7280">${sym || "—"} · ${t} · chad</span>` +
+      `<span style="color:#6b7280">${sym || "—"} · ${t} · solis</span>` +
       ` <span style="color:#6b7280">O</span>${v(bar.open)}` +
       ` <span style="color:#6b7280">H</span>${v(bar.high)}` +
       ` <span style="color:#6b7280">L</span>${v(bar.low)}` +

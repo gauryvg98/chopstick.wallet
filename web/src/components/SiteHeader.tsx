@@ -7,7 +7,7 @@ import { AuthButton } from "@/components/AuthButton";
 
 const LINKS: [string, string][] = [
   ["/#features", "Features"],
-  ["/#leaderboard", "Chad Board"],
+  ["/#leaderboard", "Solis Board"],
   ["/discover", "Discover"],
   ["/trade", "Trade"],
   ["/portfolio", "Portfolio"],
@@ -28,7 +28,7 @@ export function SiteHeader() {
         </nav>
         <div className="flex items-center gap-2">
           <Link href="/trade" className="hidden sm:block">
-            <span className="text-sm font-semibold text-white hover:text-chad transition-colors px-3">
+            <span className="text-sm font-semibold text-white hover:text-solis transition-colors px-3">
               Open app
             </span>
           </Link>
@@ -62,7 +62,7 @@ export function SiteHeader() {
             <Link
               href="/trade"
               onClick={() => setOpen(false)}
-              className="mt-3 mb-2 rounded-xl bg-chad py-3 text-center text-sm font-bold text-ink"
+              className="mt-3 mb-2 rounded-xl bg-solis py-3 text-center text-sm font-bold text-ink"
             >
               Open app
             </Link>

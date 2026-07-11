@@ -23,7 +23,7 @@ function TradesEmpty({ token }: { token: TokenDetail }) {
           href={`https://pump.fun/coin/${token.address}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-1 text-xs font-semibold text-chad hover:underline"
+          className="mt-1 text-xs font-semibold text-solis hover:underline"
         >
           View live trades on pump.fun ↗
         </a>
@@ -66,7 +66,7 @@ function AddrAvatar({ addr, size = 26 }: { addr: string; size?: number }) {
 // purely for the demo — clearly flagged "sample" in the UI. Real % held + value
 // remain authoritative on-chain data.
 const SAMPLE_ADJ = ["Silent", "Based", "Giga", "Degen", "Diamond", "Lucky", "Turbo", "Mega", "Stealth", "Frosty", "Crimson", "Golden", "Solar", "Cosmic", "Rapid", "Iron", "Quiet", "Wild"];
-const SAMPLE_NOUN = ["Otter", "Chad", "Whale", "Ape", "Bull", "Falcon", "Yeti", "Kraken", "Phoenix", "Ronin", "Wizard", "Samurai", "Nomad", "Tiger", "Comet", "Viper", "Hodler", "Maxi"];
+const SAMPLE_NOUN = ["Otter", "Solis", "Whale", "Ape", "Bull", "Falcon", "Yeti", "Kraken", "Phoenix", "Ronin", "Wizard", "Samurai", "Nomad", "Tiger", "Comet", "Viper", "Hodler", "Maxi"];
 
 function sampleName(addr: string): string {
   const h = hashStr(addr);
@@ -169,7 +169,7 @@ function HoldersTab({ token }: { token: TokenDetail }) {
           Holdings are live on-chain · trader name, PnL &amp; entry are illustrative
         </span>
         <span
-          title="ChadWallet doesn't run a per-wallet swap indexer, so trader names, PnL and avg entry shown here are generated samples. % held and value are real."
+          title="SolisMarket doesn't run a per-wallet swap indexer, so trader names, PnL and avg entry shown here are generated samples. % held and value are real."
           className="shrink-0 rounded-full border border-line bg-surface-2 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-faint"
         >
           Sample
@@ -267,7 +267,7 @@ export function HoldersTrades({ token }: { token: TokenDetail }) {
             )}
           >
             {id === "trades" && (
-              <span className="h-1.5 w-1.5 rounded-full bg-chad animate-pulse" />
+              <span className="h-1.5 w-1.5 rounded-full bg-solis animate-pulse" />
             )}
             {label}
           </button>

@@ -7,7 +7,7 @@ import { formatCompactUsd } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
 const LEADERS = [
-  { name: "GiganticChad", handle: "gigachad.sol", pnl: 412.8, vol: 2_400_000 },
+  { name: "SolLord", handle: "Solking.sol", pnl: 412.8, vol: 2_400_000 },
   { name: "ansem", handle: "blknoiz06", pnl: 318.4, vol: 1_900_000 },
   { name: "Cupsey", handle: "cupsey", pnl: 244.1, vol: 1_350_000 },
   { name: "Roman 尺", handle: "roman", pnl: 188.9, vol: 980_000 },
@@ -34,7 +34,7 @@ function Leaderboard() {
   return (
     <div className="rounded-3xl border border-line bg-surface/60 overflow-hidden">
       <div className="flex items-center justify-between px-5 h-12 border-b border-line">
-        <span className="font-bold text-white">🏆 The Chad Board</span>
+        <span className="font-bold text-white">🏆 The Solis Board</span>
         <span className="text-[11px] text-faint uppercase tracking-wide">7d PnL</span>
       </div>
       <div className="divide-y divide-line/60">
@@ -69,7 +69,7 @@ interface FeedRow {
 }
 
 const FEED_TRADERS = [
-  "moonboy.sol", "Pow", "deepfuckingvalue", "Esee", "0xChad", "frogdealer",
+  "moonboy.sol", "Pow", "deepfuckingvalue", "Esee", "0xSol", "frogdealer",
   "Zrool 尺", "apex.sol", "wifhat", "degenking",
 ];
 
@@ -105,7 +105,7 @@ function LiveFeed() {
     <div className="rounded-3xl border border-line bg-surface/60 overflow-hidden">
       <div className="flex items-center justify-between px-5 h-12 border-b border-line">
         <span className="font-bold text-white flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-chad animate-pulse" /> Live feed
+          <span className="h-2 w-2 rounded-full bg-solis animate-pulse" /> Live feed
         </span>
         <span className="text-[11px] text-faint uppercase tracking-wide">following</span>
       </div>
@@ -138,18 +138,18 @@ function LiveFeed() {
   );
 }
 
-export function ChadBoard() {
+export function SolisBoard() {
   return (
     <section id="leaderboard" className="mx-auto max-w-6xl px-4 sm:px-6 py-20">
       <div className="text-center max-w-2xl mx-auto">
-        <span className="text-sm font-bold uppercase tracking-widest text-chad">
+        <span className="text-sm font-bold uppercase tracking-widest text-solis">
           become a legend
         </span>
         <h2 className="mt-3 font-display font-bold text-4xl sm:text-5xl tracking-tight lowercase">
           climb the board. flex the gains.
         </h2>
         <p className="mt-4 text-lg text-muted">
-          Follow the best, see every move in real time, and make your name on ChadWallet.
+          Follow the best, see every move in real time, and make your name on SolisMarket.
         </p>
       </div>
 

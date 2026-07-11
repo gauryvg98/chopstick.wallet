@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"chadwallet/server/internal/types"
+	"solismarket/server/internal/types"
 )
 
 // Deterministic synth fallbacks for holders/trades when an upstream is empty.

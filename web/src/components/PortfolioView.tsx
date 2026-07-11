@@ -8,7 +8,7 @@ import { PortfolioPositions } from "@/components/PortfolioPositions";
 import { Button } from "@/components/ui/Button";
 
 /**
- * Full-page live wallet for the chads — SOL + every token with current PnL, plus
+ * Full-page live wallet for the degens — SOL + every token with current PnL, plus
  * headline Net / Active / Realized PnL. Cost basis is chain-derived (no DB),
  * valued in real time off the same websocket price stream as the rest of the app.
  */
@@ -32,8 +32,8 @@ export function PortfolioView() {
               </p>
             </div>
             {authenticated && (
-              <span className="inline-flex items-center gap-2 text-sm font-semibold text-chad">
-                <span className="h-2 w-2 rounded-full bg-chad animate-pulse" />
+              <span className="inline-flex items-center gap-2 text-sm font-semibold text-solis">
+                <span className="h-2 w-2 rounded-full bg-solis animate-pulse" />
                 Live
               </span>
             )}
@@ -61,7 +61,7 @@ export function PortfolioView() {
           {authenticated && (
             <p className="mt-4 text-center text-xs text-faint">
               Want to trade?{" "}
-              <Link href="/trade" className="text-chad font-semibold hover:underline">
+              <Link href="/trade" className="text-solis font-semibold hover:underline">
                 Open the trade desk →
               </Link>
             </p>

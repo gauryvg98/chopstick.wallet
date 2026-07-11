@@ -86,9 +86,9 @@ function TradeMockup() {
       <div className="flex h-9 items-center gap-2 border-b border-line bg-surface-2 px-4">
         <span className="h-3 w-3 rounded-full bg-down/80" />
         <span className="h-3 w-3 rounded-full bg-amber-400/80" />
-        <span className="h-3 w-3 rounded-full bg-chad/80" />
+        <span className="h-3 w-3 rounded-full bg-solis/80" />
         <div className="ml-3 flex h-5 max-w-xs flex-1 items-center rounded-md border border-line bg-ink/60 px-2 text-[10px] text-faint">
-          chadwallet.xyz/trade
+          solismarket.xyz/trade
         </div>
       </div>
 
@@ -96,7 +96,7 @@ function TradeMockup() {
       <div className="grid h-[340px] grid-cols-[1fr_1.5fr_1fr] text-xs">
         {/* left: trending */}
         <div className="space-y-0.5 overflow-hidden border-r border-line p-2">
-          <div className="px-1 pb-1 text-[10px] font-bold text-chad">🔥 Trending</div>
+          <div className="px-1 pb-1 text-[10px] font-bold text-solis">🔥 Trending</div>
           {TOKENS.map((t, i) => (
             <div key={t.sym} className={`flex items-center gap-1.5 rounded-lg px-1.5 py-1.5 ${i === 4 ? "bg-surface-2 ring-1 ring-line-2" : ""}`}>
               <span className="w-3 tnum text-[9px] text-faint">{i + 1}</span>
@@ -151,7 +151,7 @@ function TradeMockup() {
         {/* right: buy/sell */}
         <div className="space-y-2 p-3">
           <div className="grid grid-cols-2 gap-1 rounded-lg bg-surface-2 p-1">
-            <div className="flex h-6 items-center justify-center rounded-md bg-chad text-[10px] font-bold text-ink">BUY</div>
+            <div className="flex h-6 items-center justify-center rounded-md bg-solis text-[10px] font-bold text-ink">BUY</div>
             <div className="flex h-6 items-center justify-center rounded-md text-[10px] font-bold text-muted">SELL</div>
           </div>
           <div className="flex h-9 items-center rounded-lg border border-line bg-surface-2 px-2 font-semibold text-white">$100.00</div>
@@ -160,7 +160,7 @@ function TradeMockup() {
               <div key={p} className="flex h-5 items-center justify-center rounded border border-line bg-surface-2 text-[9px] text-muted">{p}</div>
             ))}
           </div>
-          <div className="flex h-9 items-center justify-center rounded-lg bg-chad text-[11px] font-bold text-ink">Buy {active.sym}</div>
+          <div className="flex h-9 items-center justify-center rounded-lg bg-solis text-[11px] font-bold text-ink">Buy {active.sym}</div>
           <div className="mt-2 rounded-lg border border-line bg-surface/60 p-2">
             <div className="mb-1 text-[10px] font-bold text-white">Your position</div>
             <div className="flex justify-between text-[10px] text-muted"><span>PnL</span><span className="font-semibold text-up">+$1.82k (24.1%)</span></div>
@@ -203,7 +203,7 @@ function PhoneScreen() {
       <div className="grid grid-cols-4 gap-1 px-2 pt-2">
         {acts.map(([ic, l]) => (
           <div key={l} className="flex flex-col items-center gap-1">
-            <div className="grid h-8 w-8 place-items-center rounded-full bg-chad text-sm font-bold text-ink">{ic}</div>
+            <div className="grid h-8 w-8 place-items-center rounded-full bg-solis text-sm font-bold text-ink">{ic}</div>
             <span className="text-[7px] text-muted">{l}</span>
           </div>
         ))}
@@ -228,7 +228,7 @@ function PhoneScreen() {
       </div>
       <div className="grid grid-cols-4 border-t border-line py-2">
         {nav.map(([ic, l, act]) => (
-          <div key={l} className={`flex flex-col items-center gap-0.5 ${act ? "text-chad" : "text-faint"}`}>
+          <div key={l} className={`flex flex-col items-center gap-0.5 ${act ? "text-solis" : "text-faint"}`}>
             <span className="text-[10px]">{ic}</span>
             <span className="text-[6px]">{l}</span>
           </div>
@@ -242,7 +242,7 @@ export function WebSection() {
   return (
     <section className="relative overflow-hidden">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 py-24 sm:py-32 text-center">
-        <span className="text-sm font-bold uppercase tracking-widest text-chad">
+        <span className="text-sm font-bold uppercase tracking-widest text-solis">
           Now available on web
         </span>
         <h2 className="mt-3 font-display font-bold text-4xl sm:text-6xl tracking-tight lowercase">

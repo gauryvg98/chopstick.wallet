@@ -1,6 +1,6 @@
-# Fly.io config for the ChadWallet Go API.
+# Fly.io config for the SolisMarket Go API.
 # `app` must be globally unique — change it, or let `fly launch` rename it.
-app = "chadwallet-api"
+app = "solismarket-api"
 primary_region = "iad"  # US-East, close to most Solana data providers + RPCs
 
 [build]

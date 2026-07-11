@@ -286,7 +286,7 @@ export function TradePanel({ address }: { address: string }) {
                 "h-10 rounded-xl text-sm font-bold uppercase transition-colors",
                 side === s
                   ? s === "buy"
-                    ? "bg-chad text-ink"
+                    ? "bg-solis text-ink"
                     : "bg-down text-white"
                   : "text-muted hover:text-white"
               )}
@@ -313,7 +313,7 @@ export function TradePanel({ address }: { address: string }) {
                       }}
                       className={cn(
                         "px-1.5 h-5 rounded text-[10px] font-bold uppercase transition-colors",
-                        buyDenom === d ? "bg-chad text-ink" : "text-muted hover:text-white"
+                        buyDenom === d ? "bg-solis text-ink" : "text-muted hover:text-white"
                       )}
                     >
                       {d}
@@ -360,7 +360,7 @@ export function TradePanel({ address }: { address: string }) {
                       : String(+(maxSol * (solPrice ?? 0)).toFixed(2))
                   )
                 }
-                className="h-8 rounded-lg bg-surface-2 border border-line text-xs font-bold text-chad hover:bg-chad/10"
+                className="h-8 rounded-lg bg-surface-2 border border-line text-xs font-bold text-solis hover:bg-solis/10"
                 title={`Max ${maxSol.toFixed(4)} SOL (keeps ${FEE_RESERVE_SOL} for fees)`}
               >
                 Max
@@ -435,7 +435,7 @@ export function TradePanel({ address }: { address: string }) {
                     className={cn(
                       "px-1.5 h-6 rounded-md text-[11px] font-bold transition-colors",
                       s === slippage
-                        ? "bg-chad text-ink"
+                        ? "bg-solis text-ink"
                         : "bg-surface-2 text-muted hover:text-white"
                     )}
                   >
@@ -475,7 +475,7 @@ export function TradePanel({ address }: { address: string }) {
             <p className="text-[11px] text-faint text-center">
               <button
                 onClick={() => login()}
-                className="text-chad font-semibold hover:underline"
+                className="text-solis font-semibold hover:underline"
               >
                 Sign in
               </button>{" "}
@@ -491,7 +491,7 @@ export function TradePanel({ address }: { address: string }) {
             href={`https://solscan.io/tx/${signature}`}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center justify-center gap-1.5 rounded-xl bg-surface-2 border border-line py-2 text-xs font-semibold text-chad hover:border-chad/40 transition-colors"
+            className="flex items-center justify-center gap-1.5 rounded-xl bg-surface-2 border border-line py-2 text-xs font-semibold text-solis hover:border-solis/40 transition-colors"
           >
             {swapStage === "sending"
               ? "Broadcasting"
@@ -508,7 +508,7 @@ export function TradePanel({ address }: { address: string }) {
               "relative rounded-xl border text-sm text-center py-2 px-6 font-semibold",
               flashErr
                 ? "bg-down/15 border-down/40 text-down"
-                : "bg-chad/15 border-chad/40 text-chad"
+                : "bg-solis/15 border-solis/40 text-solis"
             )}
           >
             {flash}
@@ -540,7 +540,7 @@ export function TradePanel({ address }: { address: string }) {
                   onClick={() => setPosTab(t)}
                   className={cn(
                     "px-2.5 h-6 rounded-md text-[11px] font-bold uppercase transition-colors",
-                    posTab === t ? "bg-chad text-ink" : "text-muted hover:text-white"
+                    posTab === t ? "bg-solis text-ink" : "text-muted hover:text-white"
                   )}
                 >
                   {t}

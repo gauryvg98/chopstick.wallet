@@ -15,7 +15,7 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"chadwallet/server/internal/jupiter"
+	"solismarket/server/internal/jupiter"
 )
 
 // Pricer batch-fetches prices for many mints.

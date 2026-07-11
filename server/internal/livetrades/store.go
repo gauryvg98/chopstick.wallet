@@ -7,7 +7,7 @@ import (
 	"sort"
 	"sync"
 
-	"chadwallet/server/internal/types"
+	"solismarket/server/internal/types"
 )
 
 const maxPerMint = 200

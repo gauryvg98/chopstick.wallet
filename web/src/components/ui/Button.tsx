@@ -4,10 +4,10 @@ type Variant = "primary" | "sell" | "dark" | "ghost" | "white" | "outline";
 type Size = "sm" | "md" | "lg";
 
 const base =
-  "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-chad/60 disabled:opacity-50 disabled:pointer-events-none select-none";
+  "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-solis/60 disabled:opacity-50 disabled:pointer-events-none select-none";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-chad text-ink hover:bg-chad-dark",
+  primary: "bg-solis text-ink hover:bg-solis-dark",
   sell: "bg-down text-white hover:brightness-110",
   dark: "bg-surface-2 text-white hover:bg-line border border-line-2",
   ghost: "bg-transparent text-white hover:bg-white/5",

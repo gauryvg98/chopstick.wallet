@@ -7,7 +7,7 @@ import { useMemo, useSyncExternalStore } from "react";
  * useSyncExternalStore so every star toggles in sync across the page, and
  * survives reloads. Self-contained — no backend, no account needed.
  */
-const KEY = "chad.watchlist";
+const KEY = "solis.watchlist";
 const listeners = new Set<() => void>();
 
 function read(): string[] {

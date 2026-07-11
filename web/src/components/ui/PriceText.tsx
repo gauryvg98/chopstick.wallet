@@ -3,7 +3,7 @@ import { cn } from "@/lib/cn";
 
 /**
  * Renders a USD token price with the memecoin "$0.0₄1234" subscript-zero
- * notation for very small values (matches the ChadWallet app).
+ * notation for very small values (matches the SolisMarket app).
  */
 export function PriceText({
   value,

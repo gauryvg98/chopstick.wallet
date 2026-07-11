@@ -17,7 +17,7 @@ import (
 	"sync"
 	"time"
 
-	"chadwallet/server/internal/types"
+	"solismarket/server/internal/types"
 )
 
 const rpcBase = "https://mainnet.helius-rpc.com/?api-key="

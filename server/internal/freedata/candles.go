@@ -3,7 +3,7 @@ package freedata
 import (
 	"sort"
 
-	"chadwallet/server/internal/types"
+	"solismarket/server/internal/types"
 )
 
 // bucketCandles re-aggregates ascending OHLCV candles into coarser buckets.

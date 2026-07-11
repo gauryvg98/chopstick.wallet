@@ -39,7 +39,7 @@ export function TokenAvatar({
   const gradient = GRADIENTS[hash(symbol) % GRADIENTS.length];
   const initials = symbol.replace(/[^a-zA-Z0-9]/g, "").slice(0, 2).toUpperCase();
   const interactive = onClick
-    ? "cursor-pointer hover:ring-2 hover:ring-chad/60 transition-shadow"
+    ? "cursor-pointer hover:ring-2 hover:ring-solis/60 transition-shadow"
     : "";
   const title = onClick ? `${symbol} — quick view` : undefined;
 

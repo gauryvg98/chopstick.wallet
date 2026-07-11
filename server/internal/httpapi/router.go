@@ -13,12 +13,12 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
-	"chadwallet/server/internal/cache"
-	"chadwallet/server/internal/freedata"
-	"chadwallet/server/internal/jupiter"
-	"chadwallet/server/internal/metrics"
-	"chadwallet/server/internal/provider"
-	"chadwallet/server/internal/types"
+	"solismarket/server/internal/cache"
+	"solismarket/server/internal/freedata"
+	"solismarket/server/internal/jupiter"
+	"solismarket/server/internal/metrics"
+	"solismarket/server/internal/provider"
+	"solismarket/server/internal/types"
 )
 
 type Server struct {

@@ -31,7 +31,7 @@ const Ctx = createContext<{
   toggleMobile: () => {},
 });
 
-const KEY = "chad.sidebarCollapsed";
+const KEY = "solis.sidebarCollapsed";
 
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);

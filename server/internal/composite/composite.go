@@ -8,9 +8,9 @@ import (
 	"context"
 	"log"
 
-	"chadwallet/server/internal/birdeye"
-	"chadwallet/server/internal/helius"
-	"chadwallet/server/internal/types"
+	"solismarket/server/internal/birdeye"
+	"solismarket/server/internal/helius"
+	"solismarket/server/internal/types"
 )
 
 type Composite struct {

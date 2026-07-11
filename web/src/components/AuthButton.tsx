@@ -69,12 +69,12 @@ export function AuthButton({
           fullWidth && "w-full justify-center"
         )}
       >
-        <span className="h-7 w-7 rounded-full bg-gradient-to-br from-chad to-teal shrink-0" />
+        <span className="h-7 w-7 rounded-full bg-gradient-to-br from-solis to-teal shrink-0" />
         <span className="text-sm font-semibold tnum text-white">
           {addr ? shortAddr(addr, 4, 4) : "Wallet"}
         </span>
         {isDemo && (
-          <span className="text-[10px] uppercase tracking-wide font-bold text-ink bg-chad rounded px-1 py-0.5">
+          <span className="text-[10px] uppercase tracking-wide font-bold text-ink bg-solis rounded px-1 py-0.5">
             Demo
           </span>
         )}
@@ -100,7 +100,7 @@ export function AuthButton({
                     target="_blank"
                     rel="noreferrer"
                     title="View wallet on Solscan"
-                    className="font-mono text-xs text-muted hover:text-chad transition-colors inline-flex items-center gap-1"
+                    className="font-mono text-xs text-muted hover:text-solis transition-colors inline-flex items-center gap-1"
                   >
                     {shortAddr(addr, 5, 5)} ↗
                   </a>
@@ -126,7 +126,7 @@ export function AuthButton({
             <Link
               href="/portfolio"
               onClick={() => setOpen(false)}
-              className="block text-center text-xs font-semibold text-chad hover:underline py-1.5"
+              className="block text-center text-xs font-semibold text-solis hover:underline py-1.5"
             >
               View full portfolio →
             </Link>

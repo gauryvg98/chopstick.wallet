@@ -68,7 +68,7 @@ export function PortfolioChart({
               onClick={() => setWin(w)}
               className={cn(
                 "px-2.5 h-7 rounded-md text-[11px] font-bold transition-colors",
-                w === win ? "bg-chad text-ink" : "text-muted hover:text-white"
+                w === win ? "bg-solis text-ink" : "text-muted hover:text-white"
               )}
             >
               {w}

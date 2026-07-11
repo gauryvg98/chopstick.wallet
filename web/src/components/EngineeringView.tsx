@@ -17,7 +17,7 @@ function Section({
 }) {
   return (
     <section id={id} className="scroll-mt-24 py-10 border-t border-line/60 first:border-0">
-      <div className="text-xs font-bold uppercase tracking-widest text-chad">{eyebrow}</div>
+      <div className="text-xs font-bold uppercase tracking-widest text-solis">{eyebrow}</div>
       <h2 className="mt-2 font-display font-bold text-2xl sm:text-3xl text-white lowercase tracking-tight">
         {title}
       </h2>
@@ -112,7 +112,7 @@ export function EngineeringView() {
       <div className="pointer-events-none fixed inset-0 z-0 bg-ink">
         <div className="absolute inset-0 starfield opacity-70" />
         <div className="absolute inset-0 starfield opacity-40" style={{ backgroundSize: "230px 230px" }} />
-        <div className="absolute -top-40 left-[12%] h-[42rem] w-[42rem] rounded-full bg-chad/10 blur-[170px]" />
+        <div className="absolute -top-40 left-[12%] h-[42rem] w-[42rem] rounded-full bg-solis/10 blur-[170px]" />
         <div className="absolute top-1/3 right-[2%] h-[38rem] w-[38rem] rounded-full bg-teal/10 blur-[170px]" />
       </div>
 
@@ -121,9 +121,9 @@ export function EngineeringView() {
         <main className="flex-1">
           <div className="mx-auto max-w-4xl px-4 sm:px-6 py-12 sm:py-16">
             {/* hero */}
-            <div className="text-xs font-bold uppercase tracking-widest text-chad">Engineering</div>
+            <div className="text-xs font-bold uppercase tracking-widest text-solis">Engineering</div>
             <h1 className="mt-2 font-display font-bold text-4xl sm:text-5xl text-white lowercase tracking-tight">
-              how chad.wallet is built
+              how solis.wallet is built
             </h1>
             <p className="mt-4 text-lg text-muted leading-relaxed">
               A Next.js trading frontend talks to a small Go API that fronts{" "}
@@ -142,7 +142,7 @@ export function EngineeringView() {
                 <a
                   key={id}
                   href={`#${id}`}
-                  className="rounded-full border border-line bg-surface/50 px-3 py-1.5 text-xs font-semibold text-muted hover:text-white hover:border-chad/40 transition-colors"
+                  className="rounded-full border border-line bg-surface/50 px-3 py-1.5 text-xs font-semibold text-muted hover:text-white hover:border-solis/40 transition-colors"
                 >
                   {label}
                 </a>
@@ -160,7 +160,7 @@ export function EngineeringView() {
               </p>
               <Diagram
                 src="/brand/diagrams/01-system-overview.svg"
-                alt="ChadWallet system overview — browser, Go API, websocket hub, and free upstreams"
+                alt="SolisMarket system overview — browser, Go API, websocket hub, and free upstreams"
                 caption="System overview — browser ⇄ Go API (REST + websocket) ⇄ free Solana upstreams."
               />
               <Diagram
@@ -176,7 +176,7 @@ export function EngineeringView() {
                 head={["Concern", "Choice"]}
                 rows={[
                   ["Framework", "Next.js 16 (App Router, Turbopack) · React 19"],
-                  ["Styling", <>Tailwind v4 — near-black theme, spring-green <K>#22e07b</K> accent</>],
+                  ["Styling", <>Tailwind v4 — near-black theme, gold <K>#F5B301</K> accent</>],
                   ["Data", <>SWR → typed <K>ApiClient</K> (mock ↔ live, env-selected)</>],
                   ["Auth / wallet", "Privy — Apple/Google login + embedded Solana MPC wallet"],
                   ["Charts", "TradingView lightweight-charts v5 (candles + volume + OHLC legend)"],
@@ -237,7 +237,7 @@ export function EngineeringView() {
                   ["GeckoTerminal", "Trending, OHLCV history (1m+), token detail", "keyless"],
                   ["DexScreener", "Multi-token prices, sub-minute sampling, quote-token selection", "keyless"],
                   ["Jupiter", "Swap quotes + routes, batch prices", "keyless"],
-                  ["Helius", "Holders, wallet balances, RPC proxy, tx broadcast", <span className="text-chad font-semibold">key</span>],
+                  ["Helius", "Holders, wallet balances, RPC proxy, tx broadcast", <span className="text-solis font-semibold">key</span>],
                   ["PumpPortal", "Real-time launches, migrations (→ Graduating), trades", "key (trades)"],
                   ["pump.fun", "Brand-new bonding-curve token detail + sampling", "keyless"],
                 ]}
