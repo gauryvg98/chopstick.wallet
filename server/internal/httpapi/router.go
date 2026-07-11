@@ -92,7 +92,14 @@ func (s *Server) Router() http.Handler {
 
 func (s *Server) cors(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", s.allowed)
+		// Public read-only endpoints (health check + latency metrics) are safe to
+		// expose to any origin — e.g. the portfolio site embedding /api/status.
+		// Every other route stays locked to the configured frontend origin.
+		origin := s.allowed
+		if r.URL.Path == "/health" || r.URL.Path == "/api/status" {
+			origin = "*"
+		}
+		w.Header().Set("Access-Control-Allow-Origin", origin)
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 		// Reflect whatever headers the browser asks for in preflight (the
 		// @solana/kit RPC transport sends a `solana-client` header, etc.), falling
