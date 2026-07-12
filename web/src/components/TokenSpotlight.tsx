@@ -59,7 +59,7 @@ function SpotlightModal({
   onClose: () => void;
 }) {
   const { data: detail } = useToken(token.address);
-  const { price: livePrice, dir } = useLivePrice(token.address);
+  const { price: livePrice } = useLivePrice(token.address);
   const [copied, setCopied] = useState(false);
   const [broken, setBroken] = useState(false);
 
@@ -143,11 +143,7 @@ function SpotlightModal({
           </div>
           <PriceText
             value={price}
-            className={cn(
-              "mt-2 block font-display font-bold text-3xl text-white",
-              dir === "up" && "flash-up",
-              dir === "down" && "flash-down"
-            )}
+            className="mt-2 block font-display font-bold text-3xl text-white"
           />
         </div>
 

@@ -122,4 +122,28 @@
 @media (prefers-reduced-motion: reduce) {
   .marquee-track { animation: none !important; }
   .flash-up, .flash-down { animation: none !important; }
+  .rd-strip { transition: none !important; }
 }
+
+/* Slot-machine rolling digits (RollingDigits primitive). Each digit rides a
+   vertical 0-9 strip; only translateY animates (GPU-composited). tabular-nums
+   (.tnum, on every readout) keeps each column a fixed width, so the row width
+   never shifts as digits roll — no layout thrash, marquee-safe. */
+.rd { display: inline; white-space: nowrap; }
+.rd-col {
+  display: inline-block;
+  overflow: hidden;
+  height: 1em;
+  line-height: 1;
+  vertical-align: -0.125em;
+}
+.rd-strip {
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.34s cubic-bezier(0.2, 0.85, 0.25, 1);
+}
+.rd-cell { height: 1em; line-height: 1; display: block; text-align: center; }
+.rd-sep { display: inline-block; white-space: pre; }
+/* Flash highlight box (fired via the Web Animations API on each tick). Negative
+   margin cancels the padding so the highlight never shifts surrounding layout. */
+.rd-flash { border-radius: 5px; padding: 0 2px; margin: 0 -2px; }

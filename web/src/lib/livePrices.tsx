@@ -11,7 +11,6 @@ import {
   useSyncExternalStore,
 } from "react";
 import { PriceText } from "@/components/ui/PriceText";
-import { cn } from "@/lib/cn";
 
 interface Tick {
   price: number;
@@ -372,19 +371,10 @@ export function LivePrice({
   fallback: number;
   className?: string;
 }) {
-  const { price, dir } = useLivePrice(mint);
+  const { price } = useLivePrice(mint);
   // Never render a live 0 (e.g. while the price stream is briefly unavailable) —
-  // fall back to the last-known static price instead.
+  // fall back to the last-known static price instead. PriceText handles the
+  // slot-machine roll + up/down flash itself when `value` changes.
   const value = price && price > 0 ? price : fallback;
-  return (
-    <PriceText
-      value={value}
-      className={cn(
-        "px-0.5",
-        dir === "up" && "flash-up",
-        dir === "down" && "flash-down",
-        className
-      )}
-    />
-  );
+  return <PriceText value={value} className={className} />;
 }
