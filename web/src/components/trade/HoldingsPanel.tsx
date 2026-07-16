@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { useHoldings, usePositions, useToken } from "@/lib/api/hooks";
 import { useLivePrice } from "@/lib/livePrices";
 import { TokenAvatar } from "@/components/ui/TokenAvatar";
+import { RollingNumber } from "@/components/ui/RollingNumber";
 import { formatUsd, formatCompact, formatSol, formatPct, shortAddr } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import type { Position } from "@/lib/api/types";
@@ -58,7 +59,9 @@ export function HoldingsPanel({ flat = false }: { flat?: boolean }) {
         </div>
         <div className="text-right">
           <div className="text-[10px] uppercase tracking-wide text-faint">Total value</div>
-          <div className="font-bold text-white tnum">{formatUsd(total)}</div>
+          <div className="font-bold text-white tnum">
+            <RollingNumber value={total} format={formatUsd} />
+          </div>
         </div>
       </div>
 
@@ -68,10 +71,16 @@ export function HoldingsPanel({ flat = false }: { flat?: boolean }) {
           <TokenAvatar symbol="SOL" logoURI={null} size={30} />
           <div className="min-w-0 flex-1">
             <div className="text-sm font-semibold text-white">SOL</div>
-            <div className="text-xs text-muted tnum">{sol.toFixed(4)} SOL</div>
+            <div className="text-xs text-muted tnum">
+              <RollingNumber value={sol} format={(n) => n.toFixed(4)} /> SOL
+            </div>
           </div>
           <div className="text-right text-sm font-semibold text-white tnum">
-            {solUsd > 0 ? formatUsd(solUsd) : "—"}
+            {solUsd > 0 ? (
+              <RollingNumber value={solUsd} format={formatUsd} />
+            ) : (
+              "—"
+            )}
           </div>
         </div>
 
@@ -142,16 +151,19 @@ function HoldingRow({
         <div className="text-sm font-semibold text-white truncate">
           {token?.symbol ?? shortAddr(mint, 4, 4)}
         </div>
-        <div className="text-xs text-muted tnum">{formatCompact(amount)} tokens</div>
+        <div className="text-xs text-muted tnum">
+          <RollingNumber value={amount} format={formatCompact} /> tokens
+        </div>
       </div>
       <div className="text-right shrink-0">
         <div className="text-sm font-semibold text-white tnum">
-          {usd > 0 ? formatUsd(usd) : "—"}
+          {usd > 0 ? <RollingNumber value={usd} format={formatUsd} /> : "—"}
         </div>
         {hasCost ? (
           <div className={cn("text-[11px] tnum", up ? "text-up" : "text-down")}>
-            {up ? "▲" : "▼"} {formatPct(pnlPct)} · {up ? "+" : ""}
-            {formatSol(pnlSol)}
+            {up ? "▲" : "▼"} <RollingNumber value={pnlPct} format={formatPct} /> ·{" "}
+            {up ? "+" : ""}
+            <RollingNumber value={pnlSol} format={formatSol} />
           </div>
         ) : (
           <div className="text-[11px] text-faint">no entry</div>

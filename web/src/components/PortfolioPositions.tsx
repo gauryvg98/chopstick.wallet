@@ -8,6 +8,7 @@ import { SOL_MINT } from "@/lib/swap";
 import { TokenAvatar } from "@/components/ui/TokenAvatar";
 import { useSpotlight } from "@/components/TokenSpotlight";
 import { PortfolioChart } from "@/components/PortfolioChart";
+import { RollingNumber } from "@/components/ui/RollingNumber";
 import {
   formatSol,
   formatUsd,
@@ -112,10 +113,19 @@ export function PortfolioPositions({ owner }: { owner: string }) {
               <TokenAvatar symbol="SOL" logoURI={null} size={34} />
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold text-white">SOL</div>
-                <div className="text-xs text-muted tnum">{solBalance.toFixed(4)} SOL</div>
+                <div className="text-xs text-muted tnum">
+                  <RollingNumber
+                    value={solBalance}
+                    format={(n) => n.toFixed(4)}
+                  />{" "}
+                  SOL
+                </div>
               </div>
               <div className="text-right text-sm font-semibold text-white tnum">
-                {formatUsd(solBalance * solPrice)}
+                <RollingNumber
+                  value={solBalance * solPrice}
+                  format={formatUsd}
+                />
               </div>
             </div>
 
@@ -223,9 +233,23 @@ function ActivityRow({ item, solPrice }: { item: ActivityItem; solPrice: number 
       <div className="min-w-0 flex-1">
         <div className="text-sm text-white truncate">
           <span className={cn("font-semibold", color)}>{k.label}</span>{" "}
-          {isToken
-            ? `${formatCompact(item.tokenAmount ?? 0)} ${sym}`
-            : `${item.solAmount.toFixed(4)} SOL`}
+          {isToken ? (
+            <>
+              <RollingNumber
+                value={item.tokenAmount ?? 0}
+                format={formatCompact}
+              />{" "}
+              {sym}
+            </>
+          ) : (
+            <>
+              <RollingNumber
+                value={item.solAmount}
+                format={(n) => n.toFixed(4)}
+              />{" "}
+              SOL
+            </>
+          )}
           {item.failed && (
             <span className="ml-1.5 text-[10px] font-bold text-down uppercase">
               failed
@@ -234,17 +258,25 @@ function ActivityRow({ item, solPrice }: { item: ActivityItem; solPrice: number 
         </div>
         <div className="text-[11px] text-faint tnum">
           {timeAgo(item.timestamp * 1000)}
-          {item.feeSol > 0 && ` · fee ${formatSol(item.feeSol)}`}
+          {item.feeSol > 0 && (
+            <>
+              {" · fee "}
+              <RollingNumber value={item.feeSol} format={formatSol} />
+            </>
+          )}
         </div>
       </div>
       {item.solAmount > 0 && (
         <div className="text-right shrink-0">
           <div className={cn("text-sm font-semibold tnum", color)}>
             {k.sign}
-            {formatSol(item.solAmount)}
+            <RollingNumber value={item.solAmount} format={formatSol} />
           </div>
           <div className="text-[10px] text-faint tnum">
-            {formatUsd(item.solAmount * solPrice)}
+            <RollingNumber
+              value={item.solAmount * solPrice}
+              format={formatUsd}
+            />
           </div>
         </div>
       )}
@@ -285,7 +317,7 @@ function PnlStat({
               up ? "bg-up/15 text-up" : "bg-down/15 text-down"
             )}
           >
-            {up ? "▲" : "▼"} {formatPct(pct)}
+            {up ? "▲" : "▼"} <RollingNumber value={pct} format={formatPct} />
           </span>
         )}
       </div>
@@ -297,11 +329,11 @@ function PnlStat({
         )}
       >
         {up ? "+" : ""}
-        {formatSol(sol)}
+        <RollingNumber value={sol} format={formatSol} />
       </div>
       <div className="text-[10px] text-faint tnum truncate">
         {up ? "+" : ""}
-        {formatUsd(usd)} · {sub}
+        <RollingNumber value={usd} format={formatUsd} /> · {sub}
       </div>
     </div>
   );
@@ -321,9 +353,11 @@ function FlowStat({
   return (
     <div className="rounded-2xl border border-line bg-surface/40 px-4 py-3">
       <div className="text-[11px] uppercase tracking-wide text-faint">{label}</div>
-      <div className="mt-1 font-bold tnum text-white">{formatSol(sol)}</div>
+      <div className="mt-1 font-bold tnum text-white">
+        <RollingNumber value={sol} format={formatSol} />
+      </div>
       <div className="text-[10px] text-faint tnum truncate">
-        {formatUsd(sol * solPrice)} · {sub}
+        <RollingNumber value={sol * solPrice} format={formatUsd} /> · {sub}
       </div>
     </div>
   );
@@ -385,13 +419,14 @@ function PositionRow({
           {token?.symbol ?? shortAddr(mint, 4, 4)}
         </div>
         <div className="text-xs text-muted tnum">
-          {formatCompact(amount)} {token?.symbol ?? "tokens"}
+          <RollingNumber value={amount} format={formatCompact} />{" "}
+          {token?.symbol ?? "tokens"}
         </div>
       </div>
       <div className="text-right shrink-0">
         {/* position value */}
         <div className="text-sm font-semibold text-white tnum">
-          {formatUsd(valueSol * solPrice)}
+          <RollingNumber value={valueSol * solPrice} format={formatUsd} />
         </div>
         {hasCost ? (
           <div
@@ -401,8 +436,9 @@ function PositionRow({
             )}
           >
             {unrealizedSol >= 0 ? "+" : ""}
-            {formatSol(unrealizedSol)} · {unrealizedSol >= 0 ? "▲" : "▼"}{" "}
-            {formatPct(pnlPct)}
+            <RollingNumber value={unrealizedSol} format={formatSol} /> ·{" "}
+            {unrealizedSol >= 0 ? "▲" : "▼"}{" "}
+            <RollingNumber value={pnlPct} format={formatPct} />
           </div>
         ) : (
           <div className="text-[11px] text-faint">no entry</div>

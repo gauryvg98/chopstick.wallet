@@ -8,6 +8,7 @@ import { TokenBanner } from "@/components/TokenBanner";
 import { TokenAvatar } from "@/components/ui/TokenAvatar";
 import { ChangeText } from "@/components/ui/ChangeText";
 import { Sparkline } from "@/components/ui/Sparkline";
+import { RollingNumber } from "@/components/ui/RollingNumber";
 import { LivePrice } from "@/lib/livePrices";
 import { useSpotlight } from "@/components/TokenSpotlight";
 import { formatCompactUsd, timeAgo, shortAddr } from "@/lib/format";
@@ -60,7 +61,7 @@ function DiscoveryCard({ t }: { t: DiscoveryToken }) {
       <div className="mt-3 flex items-center justify-between text-sm">
         <span className="text-muted">Market cap</span>
         <span className="font-semibold text-white tnum">
-          {formatCompactUsd(t.marketCap)}
+          <RollingNumber value={t.marketCap} format={formatCompactUsd} />
         </span>
       </div>
       <div className="mt-1.5 flex items-center justify-between text-xs text-faint">
@@ -108,7 +109,7 @@ function TrendingCard({ t }: { t: TrendingToken }) {
         <ChangeText value={t.change24h} className="text-sm" />
       </div>
       <div className="mt-1.5 text-xs text-faint">
-        {formatCompactUsd(t.marketCap)} mc
+        <RollingNumber value={t.marketCap} format={formatCompactUsd} /> mc
       </div>
     </Link>
   );

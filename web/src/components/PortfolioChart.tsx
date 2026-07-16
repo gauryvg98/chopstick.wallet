@@ -7,6 +7,7 @@ import {
   type EquityWindow,
 } from "@/lib/equityCurve";
 import type { ActivityItem } from "@/lib/api/types";
+import { RollingNumber } from "@/components/ui/RollingNumber";
 import { formatUsd } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
@@ -50,14 +51,15 @@ export function PortfolioChart({
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="font-display font-bold text-3xl text-white tnum leading-none">
-            {formatUsd(currentTotalUsd)}
+            <RollingNumber value={currentTotalUsd} format={formatUsd} />
           </div>
           <div
             className={cn("mt-1.5 text-sm font-semibold tnum", up ? "text-up" : "text-down")}
           >
             {up ? "+" : ""}
-            {formatUsd(changeUsd)} ({up ? "+" : ""}
-            {changePct.toFixed(2)}%){" "}
+            <RollingNumber value={changeUsd} format={formatUsd} /> ({up ? "+" : ""}
+            <RollingNumber value={changePct} format={(n) => `${n.toFixed(2)}%`} />
+            ){" "}
             <span className="text-faint font-normal">· {win.toLowerCase()}</span>
           </div>
         </div>

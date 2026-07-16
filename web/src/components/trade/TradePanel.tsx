@@ -12,6 +12,7 @@ import { useLivePrice } from "@/lib/livePrices";
 import { useSwap, SOL_MINT } from "@/lib/swap";
 import { Button } from "@/components/ui/Button";
 import { PriceText } from "@/components/ui/PriceText";
+import { RollingNumber } from "@/components/ui/RollingNumber";
 import { formatUsd, formatCompact, formatPct, formatSol, timeAgo } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
@@ -115,10 +116,14 @@ export function TradePanel({ address }: { address: string }) {
                 {tr.kind}
               </span>
               <span className="flex-1 min-w-0 truncate text-white tnum">
-                {formatCompact(tr.tokenAmount ?? 0)} {sym}
+                <RollingNumber
+                  value={tr.tokenAmount ?? 0}
+                  format={formatCompact}
+                />{" "}
+                {sym}
               </span>
               <span className="shrink-0 text-muted tnum">
-                {formatSol(tr.solAmount)}
+                <RollingNumber value={tr.solAmount} format={formatSol} />
               </span>
               <span className="w-10 shrink-0 text-right text-faint tnum">
                 {timeAgo(tr.timestamp * 1000)}
@@ -322,7 +327,9 @@ export function TradePanel({ address }: { address: string }) {
                 </div>
               </div>
               <span className="text-xs text-faint">
-                Balance {solBalance.toFixed(4)} SOL
+                Balance{" "}
+                <RollingNumber value={solBalance} format={(n) => n.toFixed(4)} />{" "}
+                SOL
               </span>
             </div>
             <div className="mt-1 flex items-center h-14 rounded-2xl bg-surface-2 border border-line px-4 focus-within:border-line-2">
@@ -337,9 +344,24 @@ export function TradePanel({ address }: { address: string }) {
                 className="flex-1 bg-transparent text-2xl font-semibold text-white outline-none tnum ml-1 min-w-0"
               />
               <span className="text-xs text-faint tnum shrink-0">
-                {buyDenom === "usd"
-                  ? `≈ ${solPrice ? (buyUsd / solPrice).toFixed(4) : "—"} SOL`
-                  : `≈ ${formatUsd(buyUsd)}`}
+                {buyDenom === "usd" ? (
+                  <>
+                    ≈{" "}
+                    {solPrice ? (
+                      <RollingNumber
+                        value={buyUsd / solPrice}
+                        format={(n) => n.toFixed(4)}
+                      />
+                    ) : (
+                      "—"
+                    )}{" "}
+                    SOL
+                  </>
+                ) : (
+                  <>
+                    ≈ <RollingNumber value={buyUsd} format={formatUsd} />
+                  </>
+                )}
               </span>
             </div>
             <div className="mt-2 grid grid-cols-4 gap-2">
@@ -372,7 +394,8 @@ export function TradePanel({ address }: { address: string }) {
             <div className="flex items-center justify-between">
               <label className="text-xs text-faint">Sell amount</label>
               <span className="text-xs text-faint">
-                Holding {formatCompact(heldAmount)} {sym}
+                Holding{" "}
+                <RollingNumber value={heldAmount} format={formatCompact} /> {sym}
               </span>
             </div>
             <div className="mt-1 flex items-center h-14 rounded-2xl bg-surface-2 border border-line px-4">
@@ -405,25 +428,47 @@ export function TradePanel({ address }: { address: string }) {
         {token && amountUsd > 0 && (
           <div className="rounded-2xl bg-surface/60 border border-line p-3 text-sm space-y-1.5">
             <Row label="You pay">
-              {side === "buy"
-                ? formatUsd(amountUsd)
-                : `${formatCompact(tokensOut)} ${sym}`}
+              {side === "buy" ? (
+                <RollingNumber value={amountUsd} format={formatUsd} />
+              ) : (
+                <>
+                  <RollingNumber value={tokensOut} format={formatCompact} />{" "}
+                  {sym}
+                </>
+              )}
             </Row>
             <Row label="You receive">
-              {side === "buy"
-                ? `≈ ${formatCompact(tokensOut)} ${sym}`
-                : `≈ ${formatUsd(amountUsd)}`}
+              {side === "buy" ? (
+                <>
+                  ≈ <RollingNumber value={tokensOut} format={formatCompact} />{" "}
+                  {sym}
+                </>
+              ) : (
+                <>
+                  ≈ <RollingNumber value={amountUsd} format={formatUsd} />
+                </>
+              )}
             </Row>
             <Row label={`Min received (${slippage}%)`}>
-              {side === "buy"
-                ? `${formatCompact(minReceived)} ${sym}`
-                : `${formatUsd(amountUsd * (1 - slippage / 100))}`}
+              {side === "buy" ? (
+                <>
+                  <RollingNumber value={minReceived} format={formatCompact} />{" "}
+                  {sym}
+                </>
+              ) : (
+                <RollingNumber
+                  value={amountUsd * (1 - slippage / 100)}
+                  format={formatUsd}
+                />
+              )}
             </Row>
             <Row label="Price">
               <PriceText value={price} />
             </Row>
             <Row label="Price impact">
-              <span className="text-up">{formatPct(-PRICE_IMPACT)}</span>
+              <span className="text-up">
+                <RollingNumber value={-PRICE_IMPACT} format={formatPct} />
+              </span>
             </Row>
             <div className="flex items-center justify-between pt-1.5 border-t border-line/60">
               <span className="text-xs text-faint">Max slippage</span>
@@ -554,7 +599,7 @@ export function TradePanel({ address }: { address: string }) {
               <>
                 <div className="mt-2 flex items-end justify-between gap-2">
                   <span className="text-3xl font-bold text-white tnum leading-none">
-                    {formatUsd(valueUsd)}
+                    <RollingNumber value={valueUsd} format={formatUsd} />
                   </span>
                   {hasCost && (
                     <span
@@ -563,7 +608,8 @@ export function TradePanel({ address }: { address: string }) {
                         unrealizedSol >= 0 ? "bg-up/15 text-up" : "bg-down/15 text-down"
                       )}
                     >
-                      {unrealizedSol >= 0 ? "▲" : "▼"} {formatPct(pnlPct)}
+                      {unrealizedSol >= 0 ? "▲" : "▼"}{" "}
+                      <RollingNumber value={pnlPct} format={formatPct} />
                     </span>
                   )}
                 </div>
@@ -575,10 +621,11 @@ export function TradePanel({ address }: { address: string }) {
                     )}
                   >
                     {unrealizedSol >= 0 ? "+" : ""}
-                    {formatSol(unrealizedSol)}{" "}
+                    <RollingNumber value={unrealizedSol} format={formatSol} />{" "}
                     <span className="text-faint font-normal">
                       ({unrealizedUsd >= 0 ? "+" : ""}
-                      {formatUsd(unrealizedUsd)}) unrealized
+                      <RollingNumber value={unrealizedUsd} format={formatUsd} />)
+                      unrealized
                     </span>
                   </div>
                 ) : (
@@ -588,12 +635,17 @@ export function TradePanel({ address }: { address: string }) {
                 )}
                 <div className="mt-3 pt-3 border-t border-line/60 space-y-2 text-sm">
                   <Row label="Amount">
-                    {formatCompact(heldAmount)} {sym}
+                    <RollingNumber value={heldAmount} format={formatCompact} />{" "}
+                    {sym}
                   </Row>
                   {hasCost && (
                     <>
-                      <Row label="Cost basis">{formatSol(costSol)}</Row>
-                      <Row label="Value">{formatSol(valueSol)}</Row>
+                      <Row label="Cost basis">
+                        <RollingNumber value={costSol} format={formatSol} />
+                      </Row>
+                      <Row label="Value">
+                        <RollingNumber value={valueSol} format={formatSol} />
+                      </Row>
                     </>
                   )}
                   <Row label="Current price">
@@ -619,7 +671,10 @@ export function TradePanel({ address }: { address: string }) {
                   )}
                 >
                   {realizedSol >= 0 ? "+" : ""}
-                  {formatUsd(realizedSol * (solPrice ?? 0))}
+                  <RollingNumber
+                    value={realizedSol * (solPrice ?? 0)}
+                    format={formatUsd}
+                  />
                 </span>
                 <span
                   className={cn(
@@ -628,7 +683,14 @@ export function TradePanel({ address }: { address: string }) {
                   )}
                 >
                   {realizedSol >= 0 ? "▲" : "▼"}{" "}
-                  {formatPct(realizedCostSol > 0 ? (realizedSol / realizedCostSol) * 100 : 0)}
+                  <RollingNumber
+                    value={
+                      realizedCostSol > 0
+                        ? (realizedSol / realizedCostSol) * 100
+                        : 0
+                    }
+                    format={formatPct}
+                  />
                 </span>
               </div>
               <div
@@ -638,11 +700,13 @@ export function TradePanel({ address }: { address: string }) {
                 )}
               >
                 {realizedSol >= 0 ? "+" : ""}
-                {formatSol(realizedSol)}{" "}
+                <RollingNumber value={realizedSol} format={formatSol} />{" "}
                 <span className="text-faint font-normal">realized on {sym}</span>
               </div>
               <div className="mt-3 pt-3 border-t border-line/60 space-y-2 text-sm">
-                <Row label="Cost of sold">{formatSol(realizedCostSol)}</Row>
+                <Row label="Cost of sold">
+                  <RollingNumber value={realizedCostSol} format={formatSol} />
+                </Row>
                 <Row label="Status">
                   {hasPosition ? "Partially closed" : "Fully closed"}
                 </Row>

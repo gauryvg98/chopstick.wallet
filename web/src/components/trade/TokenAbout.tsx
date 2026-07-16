@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useToken, useTrades } from "@/lib/api/hooks";
+import { RollingNumber } from "@/components/ui/RollingNumber";
 import { formatCompactUsd, formatPct } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
@@ -17,7 +18,7 @@ function PerfBox({ label, value }: { label: string; value: number }) {
           up ? "text-up" : "text-down"
         )}
       >
-        {up ? "▲" : "▼"} {formatPct(value)}
+        {up ? "▲" : "▼"} <RollingNumber value={value} format={formatPct} />
       </div>
     </div>
   );
@@ -30,8 +31,8 @@ function SplitStat({
   left,
   right,
 }: {
-  leftLabel: string;
-  rightLabel: string;
+  leftLabel: React.ReactNode;
+  rightLabel: React.ReactNode;
   left: number;
   right: number;
 }) {
@@ -133,8 +134,16 @@ export function TokenAbout({ address }: { address: string }) {
             right={sells.length}
           />
           <SplitStat
-            leftLabel={`${formatCompactUsd(buyVol)} vol`}
-            rightLabel={`${formatCompactUsd(sellVol)} vol`}
+            leftLabel={
+              <>
+                <RollingNumber value={buyVol} format={formatCompactUsd} /> vol
+              </>
+            }
+            rightLabel={
+              <>
+                <RollingNumber value={sellVol} format={formatCompactUsd} /> vol
+              </>
+            }
             left={buyVol}
             right={sellVol}
           />

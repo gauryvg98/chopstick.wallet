@@ -7,6 +7,7 @@ import { useWatchlist } from "@/lib/watchlist";
 import { seedTokens } from "@/lib/api/tokenCache";
 import { TokenAvatar } from "@/components/ui/TokenAvatar";
 import { ChangeText } from "@/components/ui/ChangeText";
+import { RollingNumber } from "@/components/ui/RollingNumber";
 import { LivePrice, useLivePrice } from "@/lib/livePrices";
 import { useSpotlight } from "@/components/TokenSpotlight";
 import { useActiveToken } from "@/lib/activeToken";
@@ -34,7 +35,7 @@ function LiveMC({ mint, marketCap, priceUsd }: { mint: string; marketCap: number
   const mc = price && price > 0 && priceUsd > 0 ? (marketCap * price) / priceUsd : marketCap;
   return (
     <>
-      {formatCompactUsd(mc)}{" "}
+      <RollingNumber value={mc} format={formatCompactUsd} />{" "}
       <span className="text-[10px] font-medium text-faint">MC</span>
     </>
   );
@@ -140,7 +141,7 @@ function NewRow({ t, active }: { t: DiscoveryToken; active: boolean }) {
       </div>
       <div className="text-right shrink-0">
         <div className="text-[13px] font-semibold text-white tnum leading-tight">
-          {formatCompactUsd(t.marketCap)}{" "}
+          <RollingNumber value={t.marketCap} format={formatCompactUsd} />{" "}
           <span className="text-[10px] font-medium text-faint">MC</span>
         </div>
         <div className="text-[11px] text-solis tnum font-semibold mt-0.5">

@@ -8,24 +8,24 @@ import { memo } from "react";
  * a tick costs a transform, not a React re-layout. Non-digit characters
  * ($ . , % ◎ …) render inline and static.
  *
+ * The strip is ONE text node ("0\n1\n…\n9" + white-space:pre + line-height:1),
+ * not ten elements — each digit costs 2 nodes instead of 12. On a dense trading
+ * page that's the difference between ~10k and ~2k nodes, so the roll stays free.
+ *
  * Takes a PRE-FORMATTED string (the caller owns formatting) so it works for any
  * readout — price, market cap, PnL, %. Purely presentational; the parent owns
  * the flash + previous-value tracking.
  */
 
-const CELLS = Array.from({ length: 10 }, (_, i) => (
-  <span className="rd-cell" key={i}>
-    {i}
-  </span>
-));
+const STRIP = "0\n1\n2\n3\n4\n5\n6\n7\n8\n9";
 
 const Digit = memo(function Digit({ d }: { d: number }) {
-  // translateY(-d em): the strip is 10 cells tall (each 1em), so shifting up by
-  // d ems parks digit `d` in the 1em-tall, overflow-hidden window.
+  // translateY(-d em): each line is exactly 1em tall, so shifting up by d ems
+  // parks digit `d` in the 1em-tall, overflow-hidden window.
   return (
-    <span className="rd-col" aria-hidden="true">
+    <span className="rd-col">
       <span className="rd-strip" style={{ transform: `translateY(-${d}em)` }}>
-        {CELLS}
+        {STRIP}
       </span>
     </span>
   );

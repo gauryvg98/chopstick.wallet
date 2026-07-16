@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useToken, useHolders } from "@/lib/api/hooks";
 import { TokenAvatar } from "@/components/ui/TokenAvatar";
 import { ChangeText } from "@/components/ui/ChangeText";
+import { RollingNumber } from "@/components/ui/RollingNumber";
 import { useSpotlight } from "@/components/TokenSpotlight";
 import { LivePrice, useLivePrice } from "@/lib/livePrices";
 import { formatCompactUsd, formatCompact, shortAddr } from "@/lib/format";
@@ -72,7 +73,8 @@ function GraduationBar({ marketCap }: { marketCap: number }) {
       <div className="flex items-center justify-between text-xs mb-1.5">
         <span className="text-muted font-medium">Bonding curve → Raydium</span>
         <span className="tnum text-white font-semibold">
-          {formatCompactUsd(marketCap)} / {formatCompactUsd(GRADUATION_USD)}
+          <RollingNumber value={marketCap} format={formatCompactUsd} /> /{" "}
+          {formatCompactUsd(GRADUATION_USD)}
         </span>
       </div>
       <div className="h-2 rounded-full bg-ink overflow-hidden">
@@ -110,11 +112,10 @@ export function TokenHeader({ address }: { address: string }) {
     );
   }
 
-  const top10 = (
+  const top10 =
     holders && holders.length
       ? holders.slice(0, 10).reduce((a, h) => a + h.pct, 0)
-      : t.top10Pct
-  ).toFixed(1);
+      : t.top10Pct;
 
   return (
     <div className="p-3 border-b border-line">
@@ -197,17 +198,27 @@ export function TokenHeader({ address }: { address: string }) {
 
         {/* fomo-style stat boxes — scroll horizontally when they overflow */}
         <div className="flex items-center gap-2 overflow-x-auto scroll-thin flex-1 min-w-0 pb-0.5">
-          <StatBox label="Market cap" value={formatCompactUsd(liveMarketCap)} />
+          <StatBox label="Market cap">
+            <RollingNumber value={liveMarketCap} format={formatCompactUsd} />
+          </StatBox>
           <StatBox label="Price">
             <LivePrice mint={t.address} fallback={t.priceUsd} className="text-sm font-semibold text-white" />
           </StatBox>
           <StatBox label="24H change">
             <ChangeText value={t.change24h} className="text-sm" />
           </StatBox>
-          <StatBox label="24H Vol" value={formatCompactUsd(t.volume24h)} />
-          <StatBox label="Liquidity" value={formatCompactUsd(t.liquidity)} />
-          <StatBox label="Holders" value={formatCompact(t.holderCount)} />
-          <StatBox label="Top 10" value={`${top10}%`} />
+          <StatBox label="24H Vol">
+            <RollingNumber value={t.volume24h} format={formatCompactUsd} />
+          </StatBox>
+          <StatBox label="Liquidity">
+            <RollingNumber value={t.liquidity} format={formatCompactUsd} />
+          </StatBox>
+          <StatBox label="Holders">
+            <RollingNumber value={t.holderCount} format={formatCompact} />
+          </StatBox>
+          <StatBox label="Top 10">
+            <RollingNumber value={top10} format={(n) => `${n.toFixed(1)}%`} />
+          </StatBox>
         </div>
       </div>
 

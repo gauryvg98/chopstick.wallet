@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTrending } from "@/lib/api/hooks";
 import { TokenAvatar } from "@/components/ui/TokenAvatar";
+import { RollingNumber } from "@/components/ui/RollingNumber";
 import { formatCompactUsd } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
@@ -49,8 +50,15 @@ function Leaderboard() {
               <div className="text-xs text-muted truncate">@{l.handle}</div>
             </div>
             <div className="text-right">
-              <div className="text-sm font-bold text-up tnum">+{l.pnl.toFixed(1)}%</div>
-              <div className="text-xs text-faint tnum">{formatCompactUsd(l.vol)} vol</div>
+              <div className="text-sm font-bold text-up tnum">
+                <RollingNumber
+                  value={l.pnl}
+                  format={(n) => `+${n.toFixed(1)}%`}
+                />
+              </div>
+              <div className="text-xs text-faint tnum">
+                <RollingNumber value={l.vol} format={formatCompactUsd} /> vol
+              </div>
             </div>
           </div>
         ))}
@@ -129,7 +137,7 @@ function LiveFeed() {
               </div>
             </div>
             <span className="tnum font-semibold text-white">
-              {formatCompactUsd(row.usd)}
+              <RollingNumber value={row.usd} format={formatCompactUsd} />
             </span>
           </div>
         ))}

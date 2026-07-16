@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useHolders, useTrades } from "@/lib/api/hooks";
 import { TokenAvatar } from "@/components/ui/TokenAvatar";
+import { RollingNumber } from "@/components/ui/RollingNumber";
 import { formatCompactUsd, shortAddr, timeAgo } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import type { TokenDetail } from "@/lib/api/types";
@@ -143,7 +144,7 @@ function TradesTab({ token }: { token: TokenDetail }) {
               {t.side}
             </span>
             <span className="tnum text-white text-right">
-              {formatCompactUsd(t.amountUsd)}
+              <RollingNumber value={t.amountUsd} format={formatCompactUsd} />
             </span>
             <span className="tnum text-faint text-right">
               {timeAgo(t.timestamp)}
@@ -211,22 +212,41 @@ function HoldersTab({ token }: { token: TokenDetail }) {
               </div>
               {/* Position — REAL value + real % held */}
               <div className="text-right leading-tight">
-                <div className="tnum text-white">{formatCompactUsd(h.valueUsd)}</div>
-                <div className="text-[10px] text-faint tnum">{h.pct.toFixed(2)}%</div>
+                <div className="tnum text-white">
+                  <RollingNumber value={h.valueUsd} format={formatCompactUsd} />
+                </div>
+                <div className="text-[10px] text-faint tnum">
+                  <RollingNumber
+                    value={h.pct}
+                    format={(n) => `${n.toFixed(2)}%`}
+                  />
+                </div>
               </div>
               {/* PnL — sample */}
               <div className={cn("text-right leading-tight tnum", up ? "text-up" : "text-down")}>
                 <div>
                   {up ? "+" : ""}
-                  {formatCompactUsd(Math.abs(pnlUsd))}
+                  <RollingNumber
+                    value={Math.abs(pnlUsd)}
+                    format={formatCompactUsd}
+                  />
                 </div>
                 <div className="text-[10px]">
-                  {up ? "▲" : "▼"} {Math.abs(pnlPct).toFixed(1)}%
+                  {up ? "▲" : "▼"}{" "}
+                  <RollingNumber
+                    value={Math.abs(pnlPct)}
+                    format={(n) => `${n.toFixed(1)}%`}
+                  />
                 </div>
               </div>
               {/* Avg entry — sample */}
               <div className="text-right tnum text-muted">
-                {entry >= 1 ? `$${entry.toFixed(2)}` : `$${entry.toPrecision(2)}`}
+                <RollingNumber
+                  value={entry}
+                  format={(n) =>
+                    n >= 1 ? `$${n.toFixed(2)}` : `$${n.toPrecision(2)}`
+                  }
+                />
               </div>
             </div>
           );

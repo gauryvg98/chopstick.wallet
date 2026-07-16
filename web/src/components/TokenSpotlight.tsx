@@ -11,6 +11,7 @@ import Link from "next/link";
 import { TokenAvatar } from "@/components/ui/TokenAvatar";
 import { ChangeText } from "@/components/ui/ChangeText";
 import { PriceText } from "@/components/ui/PriceText";
+import { RollingNumber } from "@/components/ui/RollingNumber";
 import { useToken } from "@/lib/api/hooks";
 import { useLivePrice } from "@/lib/livePrices";
 import { formatCompactUsd, shortAddr } from "@/lib/format";
@@ -149,10 +150,18 @@ function SpotlightModal({
 
         {/* stats */}
         <div className="grid grid-cols-2 gap-px bg-line">
-          <Stat label="Market cap" value={formatCompactUsd(marketCap)} />
+          <Stat
+            label="Market cap"
+            value={<RollingNumber value={marketCap} format={formatCompactUsd} />}
+          />
           <Stat
             label="24h volume"
-            value={formatCompactUsd(detail?.volume24h ?? 0)}
+            value={
+              <RollingNumber
+                value={detail?.volume24h ?? 0}
+                format={formatCompactUsd}
+              />
+            }
           />
         </div>
 
@@ -191,7 +200,7 @@ function SpotlightModal({
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="bg-surface px-6 py-3">
       <div className="text-xs uppercase tracking-wide text-faint">{label}</div>
