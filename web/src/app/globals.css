@@ -144,9 +144,10 @@
   display: block;
   white-space: pre;
   line-height: 1;
-  transition: transform 0.34s cubic-bezier(0.2, 0.85, 0.25, 1);
+  /* Heavy, deliberate roll — the sole tick cue now the flash is gone. Expo
+     ease-out: fast pickup, long smooth settle. On rapid ticks the transition
+     retargets to the new digit mid-roll, so it reads as continuous weighty
+     motion rather than restarting. transform is compositor-only → no repaint. */
+  transition: transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .rd-sep { display: inline-block; white-space: pre; }
-/* Flash highlight box (fired via the Web Animations API on each tick). Negative
-   margin cancels the padding so the highlight never shifts surrounding layout. */
-.rd-flash { border-radius: 5px; padding: 0 2px; margin: 0 -2px; }

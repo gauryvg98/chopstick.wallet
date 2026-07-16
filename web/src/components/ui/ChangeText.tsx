@@ -1,30 +1,23 @@
-"use client";
-
 import { formatPct } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { RollingDigits } from "./RollingDigits";
-import { useTickFlash } from "./tickFlash";
 
-/** Green/red percentage change with a directional triangle; digits roll and the
- *  box flashes on change. */
+/** Green/red percentage change with a directional triangle; digits roll on
+ *  change (the roll is the tick cue, no flash). */
 export function ChangeText({
   value,
   className,
   showArrow = true,
-  flash = true,
 }: {
   value: number;
   className?: string;
   showArrow?: boolean;
-  flash?: boolean;
 }) {
-  const ref = useTickFlash<HTMLSpanElement>(value, flash);
   const up = value >= 0;
   return (
     <span
-      ref={ref}
       className={cn(
-        "tnum inline-flex items-center gap-0.5 font-semibold rd-flash",
+        "tnum inline-flex items-center gap-0.5 font-semibold",
         up ? "text-up" : "text-down",
         className
       )}
