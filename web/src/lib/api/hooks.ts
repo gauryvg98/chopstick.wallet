@@ -5,7 +5,7 @@ import useSWR from "swr";
 import { getClient } from "./index";
 import { getTokenSeed } from "./tokenCache";
 import { useDiscoverStream, useTradesStream } from "@/lib/livePrices";
-import type { DiscoverFeeds, Timeframe, Trade } from "./types";
+import type { DiscoverFeeds, OHLCV, Timeframe, Trade } from "./types";
 
 const client = getClient();
 
@@ -51,25 +51,93 @@ export function useToken(address: string | null) {
   });
 }
 
+// Progressive OHLCV. Fire ONE fresh (uncached) request for the full window,
+// then REVEAL it client-side 20 bars at a time (20 → 120) so the chart snaps in
+// instantly and then visibly fills out — the "screen gets rich" effect — WITHOUT
+// firing six separate upstream requests (GeckoTerminal's free tier 429s on a
+// rapid burst, which would collapse the chart). Every load is served straight
+// off the source (GT for 1m+, the local sampler for sub-minute); GT's own CDN
+// makes re-views of the same token/frame near-instant, so we need no local
+// cache. Same name/shape as before, so the chart consumes it unchanged.
+const REVEAL_STEPS = [20, 40, 60, 80, 100, 120];
+const REVEAL_MS = 110;
+
 export function useOHLCV(address: string | null, tf: Timeframe, _fast = false) {
-  // Sub-minute history is built from the sampler and GROWS over time, while the
-  // candle stream only carries the live edge — so these must keep re-pulling to
-  // backfill history. Coarse timeframes have complete history from GeckoTerminal,
-  // so they load once and ride the stream.
-  const subMinute = tf === "1s" || tf === "5s" || tf === "30s";
-  return useSWR(address ? ["ohlcv", address, tf] : null, () =>
-    client.getOHLCV(address as string, tf)
-  , {
-    refreshInterval: subMinute ? 3_000 : 0,
-    revalidateOnFocus: false,
-    // Refetch fresh history when you switch timeframe (never serve a frozen
-    // cold-start cache); just don't poll on a timer for coarse frames.
-    revalidateIfStale: true,
-    revalidateOnReconnect: false,
-    shouldRetryOnError: true,
-    errorRetryCount: 8,
-    errorRetryInterval: 2_500,
-  });
+  const [data, setData] = useState<OHLCV[] | undefined>(undefined);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!address) {
+      setData(undefined);
+      setIsLoading(false);
+      return;
+    }
+    let cancelled = false;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    let interval: ReturnType<typeof setInterval> | null = null;
+    setIsLoading(true);
+    setData(undefined); // reset on token / timeframe change
+
+    const subMinute = tf === "1s" || tf === "5s" || tf === "30s";
+    const tail = (bars: OHLCV[], n: number) => bars.slice(Math.max(0, bars.length - n));
+
+    // No local cache, so a transient GeckoTerminal 429 must self-heal: retry a
+    // few times before giving up rather than leaving a blank chart.
+    const fetchFull = async (): Promise<OHLCV[]> => {
+      for (let attempt = 0; attempt < 4; attempt++) {
+        if (cancelled) return [];
+        try {
+          const bars = await client.getOHLCV(address, tf, 120);
+          if (bars && bars.length) return bars;
+        } catch {
+          /* retry */
+        }
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+      return [];
+    };
+
+    (async () => {
+      const full = await fetchFull();
+      if (cancelled) return;
+      if (!full.length) {
+        setIsLoading(false);
+        return;
+      }
+      // Reveal the latest 20 first (instant paint), then grow to the full set.
+      REVEAL_STEPS.forEach((n, i) => {
+        if (n >= full.length && i > 0 && REVEAL_STEPS[i - 1] >= full.length) return;
+        timers.push(
+          setTimeout(() => {
+            if (cancelled) return;
+            setData(tail(full, n));
+            setIsLoading(false);
+          }, i * REVEAL_MS)
+        );
+      });
+    })();
+
+    // Sub-minute history grows from the live sampler, so keep re-pulling the
+    // full window to backfill it; coarse frames ride the WS candle stream.
+    if (subMinute) {
+      interval = setInterval(async () => {
+        try {
+          const bars = await client.getOHLCV(address, tf, 120);
+          if (!cancelled && bars && bars.length) setData(bars);
+        } catch {
+          /* ignore */
+        }
+      }, 3_000);
+    }
+
+    return () => {
+      cancelled = true;
+      timers.forEach(clearTimeout);
+      if (interval) clearInterval(interval);
+    };
+  }, [address, tf]);
+
+  return { data, isLoading };
 }
 
 export function useHoldings(owner: string | null) {

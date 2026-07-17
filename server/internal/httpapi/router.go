@@ -185,31 +185,24 @@ func (s *Server) handleOHLCV(w http.ResponseWriter, r *http.Request) {
 	if tf == "" {
 		tf = types.Tf1m
 	}
-	// Mark this as user-facing so its GeckoTerminal call preempts background
-	// polling — the chart someone just opened shouldn't queue behind trending —
-	// and bound it so no chart request ever hangs behind a throttle backoff: on
-	// timeout we serve sampler-built candles instead of stalling the client.
+	// No cache: the client progressively fires 20→40→…→120 bars per timeframe and
+	// each request is served fresh off the source (GeckoTerminal for 1m+, the
+	// local sampler for sub-minute). `limit` bounds the fetch so the first paint
+	// is a tiny, fast payload that then fills out. Marked user-facing so its GT
+	// call preempts background polling; timeout-bounded so it never hangs.
+	limit := 120
+	if v := r.URL.Query().Get("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			if n > 300 {
+				n = 300
+			}
+			limit = n
+		}
+	}
 	ctx, cancel := context.WithTimeout(freedata.WithPriority(r.Context()), 10*time.Second)
 	defer cancel()
 	start := time.Now()
-	// The REST OHLCV is the *historical backbone*; the chart's live edge arrives
-	// over the WS candle stream, so a full result needn't be fresh to the second —
-	// cache it for minutes so re-views / timeframe switch-backs are instant hits.
-	// A THIN result (the sampler fallback when the upstream fetch timed out) is
-	// cached only briefly so it self-heals on the next attempt rather than
-	// freezing a sparse chart for minutes.
-	data, err := cache.RememberWith(s.cache, "ohlcv:"+addr+":"+string(tf),
-		func() ([]types.OHLCV, error) { return s.prov.OHLCV(ctx, addr, tf) },
-		func(d []types.OHLCV) time.Duration {
-			switch {
-			case tf.SubMinute():
-				return 4 * time.Second
-			case len(d) < 40: // thin / sampler fallback — re-fetch soon, never freeze
-				return 6 * time.Second
-			default:
-				return 3 * time.Minute
-			}
-		})
+	data, err := s.prov.OHLCV(ctx, addr, tf, limit)
 	s.observe("chart", start, err)
 	respond(w, data, err)
 }

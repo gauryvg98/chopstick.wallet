@@ -330,7 +330,7 @@ func tfParams(tf types.Timeframe) (string, int64) {
 	}
 }
 
-func (c *Client) OHLCV(ctx context.Context, address string, tf types.Timeframe) ([]types.OHLCV, error) {
+func (c *Client) OHLCV(ctx context.Context, address string, tf types.Timeframe, limit int) ([]types.OHLCV, error) {
 	ctype, window := tfParams(tf)
 	now := time.Now().Unix()
 	q := url.Values{}
@@ -347,6 +347,9 @@ func (c *Client) OHLCV(ctx context.Context, address string, tf types.Timeframe) 
 		out = append(out, types.OHLCV{
 			Time: it.UnixTime, Open: it.O, High: it.H, Low: it.L, Close: it.C, Volume: it.V,
 		})
+	}
+	if limit > 0 && limit < len(out) {
+		out = out[len(out)-limit:]
 	}
 	return out, nil
 }

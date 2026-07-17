@@ -178,7 +178,7 @@ export interface ApiClient {
   getTrending(): Promise<TrendingToken[]>;
   getDiscover(): Promise<DiscoverFeeds>;
   getToken(address: string): Promise<TokenDetail>;
-  getOHLCV(address: string, tf: Timeframe): Promise<OHLCV[]>;
+  getOHLCV(address: string, tf: Timeframe, limit?: number): Promise<OHLCV[]>;
   getHolders(address: string): Promise<Holder[]>;
   getTrades(address: string): Promise<Trade[]>;
   getQuote(req: QuoteRequest): Promise<Quote>;

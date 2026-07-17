@@ -417,12 +417,39 @@ var gtTF = map[types.Timeframe]struct {
 	types.Tf4h:  {"hour", 4, 300, 0},
 }
 
-func (c *gtClient) ohlcv(ctx context.Context, pool string, tf types.Timeframe) ([]types.OHLCV, error) {
+func resSeconds(res string) int64 {
+	switch res {
+	case "hour":
+		return 3600
+	case "day":
+		return 86400
+	default:
+		return 60
+	}
+}
+
+func (c *gtClient) ohlcv(ctx context.Context, pool string, tf types.Timeframe, limit int) ([]types.OHLCV, error) {
 	cfg, ok := gtTF[tf]
 	if !ok {
 		cfg = gtTF[types.Tf1m]
 	}
-	url := fmt.Sprintf("%s/pools/%s/ohlcv/%s?aggregate=%d&limit=%d", gtBase, pool, cfg.res, cfg.agg, cfg.limit)
+	if limit <= 0 || limit > 300 {
+		limit = 120
+	}
+	// When we re-bucket (e.g. 5m candles → 10m buckets) we need `mult` raw
+	// candles per output bar, so scale the upstream fetch to still yield ~limit.
+	raw := limit
+	if cfg.bucket > 0 {
+		if native := int64(cfg.agg) * resSeconds(cfg.res); native > 0 {
+			if m := int(cfg.bucket / native); m > 1 {
+				raw = limit * m
+			}
+		}
+	}
+	if raw > 1000 {
+		raw = 1000
+	}
+	url := fmt.Sprintf("%s/pools/%s/ohlcv/%s?aggregate=%d&limit=%d", gtBase, pool, cfg.res, cfg.agg, raw)
 	var r struct {
 		Data struct {
 			Attributes struct {
@@ -447,7 +474,7 @@ func (c *gtClient) ohlcv(ctx context.Context, pool string, tf types.Timeframe) (
 	if cfg.bucket > 0 {
 		out = bucketCandles(out, cfg.bucket)
 	}
-	return out, nil
+	return lastN(out, limit), nil
 }
 
 func (c *gtClient) trades(ctx context.Context, pool string, price float64) ([]types.Trade, error) {

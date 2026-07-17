@@ -41,8 +41,9 @@ export class LiveClient implements ApiClient {
   getToken(address: string) {
     return this.get<TokenDetail>(`/api/tokens/${address}`);
   }
-  getOHLCV(address: string, tf: Timeframe) {
-    return this.get<OHLCV[]>(`/api/tokens/${address}/ohlcv?tf=${tf}`);
+  getOHLCV(address: string, tf: Timeframe, limit?: number) {
+    const q = limit && limit > 0 ? `&limit=${limit}` : "";
+    return this.get<OHLCV[]>(`/api/tokens/${address}/ohlcv?tf=${tf}${q}`);
   }
   getHolders(address: string) {
     return this.get<Holder[]>(`/api/tokens/${address}/holders`);

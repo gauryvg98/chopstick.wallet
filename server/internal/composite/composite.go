@@ -28,8 +28,8 @@ func (c *Composite) Banner(ctx context.Context) ([]types.Token, error) {
 func (c *Composite) Trending(ctx context.Context) ([]types.TrendingToken, error) {
 	return c.be.Trending(ctx)
 }
-func (c *Composite) OHLCV(ctx context.Context, address string, tf types.Timeframe) ([]types.OHLCV, error) {
-	return c.be.OHLCV(ctx, address, tf)
+func (c *Composite) OHLCV(ctx context.Context, address string, tf types.Timeframe, limit int) ([]types.OHLCV, error) {
+	return c.be.OHLCV(ctx, address, tf, limit)
 }
 func (c *Composite) Trades(ctx context.Context, address string) ([]types.Trade, error) {
 	return c.be.Trades(ctx, address)

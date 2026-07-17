@@ -227,7 +227,7 @@ var tfConfig = map[types.Timeframe]struct {
 	types.Tf4h:  {120, 14400},
 }
 
-func (Provider) OHLCV(_ context.Context, address string, tf types.Timeframe) ([]types.OHLCV, error) {
+func (Provider) OHLCV(_ context.Context, address string, tf types.Timeframe, limit int) ([]types.OHLCV, error) {
 	s := find(address)
 	cfg, ok := tfConfig[tf]
 	if !ok {
@@ -260,6 +260,9 @@ func (Provider) OHLCV(_ context.Context, address string, tf types.Timeframe) ([]
 			Open:   o, High: hi, Low: lo, Close: c,
 			Volume: (s.volume24h / float64(cfg.points)) * (0.4 + r.next()),
 		}
+	}
+	if limit > 0 && limit < len(out) {
+		out = out[len(out)-limit:]
 	}
 	return out, nil
 }

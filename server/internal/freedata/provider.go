@@ -373,7 +373,10 @@ func (p *Provider) poolFor(ctx context.Context, mint string) (string, error) {
 	return pool, nil
 }
 
-func (p *Provider) OHLCV(ctx context.Context, mint string, tf types.Timeframe) ([]types.OHLCV, error) {
+func (p *Provider) OHLCV(ctx context.Context, mint string, tf types.Timeframe, limit int) ([]types.OHLCV, error) {
+	if limit <= 0 {
+		limit = 120
+	}
 	pool, err := p.poolFor(ctx, mint)
 	if err != nil {
 		// Bonding-curve token — re-bucket the sampled price line to the tf.
@@ -381,7 +384,7 @@ func (p *Provider) OHLCV(ctx context.Context, mint string, tf types.Timeframe) (
 			p.ensureSub(mint)
 		}
 		if p.liveCandles != nil {
-			return lastN(bucketCandles(p.liveCandles(mint), tf.BucketSeconds()), 120), nil
+			return lastN(bucketCandles(p.liveCandles(mint), tf.BucketSeconds()), limit), nil
 		}
 		return []types.OHLCV{}, nil
 	}
@@ -395,7 +398,7 @@ func (p *Provider) OHLCV(ctx context.Context, mint string, tf types.Timeframe) (
 		if p.pl.needsSeed(mint) {
 			p.primeLine(ctx, mint, pool)
 		}
-		return lastN(bucketCandles(p.pl.candles(mint), bs), 120), nil
+		return lastN(bucketCandles(p.pl.candles(mint), bs), limit), nil
 	}
 	if tf == types.Tf1m {
 		// 1m+ has full history on GeckoTerminal (300 candles ≈ 5h), so ALWAYS serve
@@ -411,14 +414,14 @@ func (p *Provider) OHLCV(ctx context.Context, mint string, tf types.Timeframe) (
 		// TTL, hammer GT every 6s — keeping it throttled in a feedback loop.)
 		p.pl.watchMint(mint)
 		gctx, cancel := context.WithTimeout(ctx, 8*time.Second)
-		cs, e := p.gt.ohlcv(gctx, pool, tf)
+		cs, e := p.gt.ohlcv(gctx, pool, tf, limit)
 		cancel()
 		if e != nil {
 			return nil, e
 		}
 		return cs, nil
 	}
-	return p.gt.ohlcv(ctx, pool, tf)
+	return p.gt.ohlcv(ctx, pool, tf, limit)
 }
 
 // seedWindowSec bounds the historical backbone we pull from trades — generous

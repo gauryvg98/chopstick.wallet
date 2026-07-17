@@ -269,13 +269,6 @@ func main() {
 		// live candles) vs the warm pool's 2s. The hub refreshes this each tick
 		// while the chart is open.
 		hub.SetOnView(fp.WatchSubMinuteFast)
-
-		// Keep the OHLCV history cache warm for charts people are actively
-		// viewing, so a rehit (reload, second viewer, timeframe switch-back)
-		// gets the freshest copy instantly instead of paying a cold upstream
-		// fetch. The frontend itself never polls — this is one shared refresh
-		// per open chart, not one per client.
-		go warmCharts(ctx, hub, fp, c)
 	}
 
 	srv := httpapi.New(prov, jup, allowed, c, hub.ServeWS, discover)
@@ -350,59 +343,6 @@ func pollTrending(ctx context.Context, p *freedata.Provider, c *cache.Cache) {
 			return
 		case <-t.C:
 			refresh()
-		}
-	}
-}
-
-// warmCharts is the poll list: ONLY the charts a client currently has open get
-// their OHLCV kept cache-fresh, so re-views and timeframe switches are instant.
-// The list is capped — if more charts are open than the cap (e.g. many tabs), we
-// keep the most-recently-active and let the rest fall back to on-demand. There is
-// no other background charting work: nothing is warmed that isn't open.
-//
-//   - sub-minute: rebuilt from the in-memory sampler every tick (free, no upstream)
-//   - 1m+: refreshed on a slow cadence well inside the 3-minute cache, at LOW
-//     priority so a user's own (priority) chart fetch always preempts it
-func warmCharts(ctx context.Context, hub *ws.Hub, prov *freedata.Provider, c *cache.Cache) {
-	const maxCharts = 8                  // poll-list cap
-	const coarseEvery = 45 * time.Second // 1m+ refresh cadence (cache is 3m)
-	last := map[string]time.Time{}
-	t := time.NewTicker(2 * time.Second)
-	defer t.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-t.C:
-			active := hub.ActiveCandles()
-			if len(active) > maxCharts {
-				active = active[:maxCharts] // cap the poll list
-			}
-			live := make(map[string]bool, len(active))
-			for _, k := range active {
-				tf := types.Timeframe(k.Tf)
-				key := "ohlcv:" + k.Mint + ":" + k.Tf
-				live[key] = true
-				if tf.SubMinute() {
-					if data, err := prov.OHLCV(ctx, k.Mint, tf); err == nil && len(data) > 0 {
-						c.Put(key, data, 90*time.Second)
-					}
-					continue
-				}
-				if time.Since(last[key]) < coarseEvery {
-					continue
-				}
-				if data, err := prov.OHLCV(ctx, k.Mint, tf); err == nil && len(data) > 0 {
-					c.Put(key, data, 200*time.Second)
-					last[key] = time.Now()
-				}
-			}
-			// Forget cadence timers for charts no longer open.
-			for key := range last {
-				if !live[key] {
-					delete(last, key)
-				}
-			}
 		}
 	}
 }

@@ -13,7 +13,7 @@ type Provider interface {
 	Trending(ctx context.Context) ([]types.TrendingToken, error)
 	Big() []types.TrendingToken // large caps, computed during Trending
 	Token(ctx context.Context, address string) (*types.TokenDetail, error)
-	OHLCV(ctx context.Context, address string, tf types.Timeframe) ([]types.OHLCV, error)
+	OHLCV(ctx context.Context, address string, tf types.Timeframe, limit int) ([]types.OHLCV, error)
 	Holders(ctx context.Context, address string) ([]types.Holder, error)
 	Trades(ctx context.Context, address string) ([]types.Trade, error)
 	Holdings(ctx context.Context, owner string) (*types.WalletHoldings, error)   // wallet balances (on-chain)
