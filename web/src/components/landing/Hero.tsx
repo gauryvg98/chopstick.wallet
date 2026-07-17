@@ -27,7 +27,7 @@ function FloatingCard({
         <div className="text-sm font-bold text-white">{t.symbol}</div>
         <PriceText value={t.priceUsd} className="text-xs text-muted" />
       </div>
-      <ChangeText value={t.change24h} className="text-xs ml-1" />
+      <ChangeText value={t.change24h} className="text-xs ml-1" hideZero />
     </div>
   );
 }

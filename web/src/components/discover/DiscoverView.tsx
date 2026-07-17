@@ -106,7 +106,7 @@ function TrendingCard({ t }: { t: TrendingToken }) {
       </div>
       <div className="mt-3 flex items-center justify-between text-sm">
         <LivePrice mint={t.address} fallback={t.priceUsd} className="text-white font-semibold" />
-        <ChangeText value={t.change24h} className="text-sm" />
+        <ChangeText value={t.change24h} className="text-sm" hideZero />
       </div>
       <div className="mt-1.5 text-xs text-faint">
         <RollingNumber value={t.marketCap} format={formatCompactUsd} /> mc

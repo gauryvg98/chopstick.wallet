@@ -72,9 +72,10 @@ func main() {
 		}
 		fp = freedata.New(he)
 		prov = fp
-		go pollTrending(ctx, fp, c)
+		// pollTrending is started AFTER fp.SetPumpfun below — its source is now
+		// the pump.fun list, so it must not fire before the client is wired.
 		// Large caps change slowly — refresh the BIG list every few minutes so it
-		// barely adds to GeckoTerminal's tight rate limit.
+		// barely adds to the pump.fun API's rate limit.
 		go func() {
 			time.Sleep(8 * time.Second) // let startup traffic settle first
 			// Populate the sticky curated baseline fast, retrying through any
@@ -147,6 +148,9 @@ func main() {
 		pf := pumpfun.New(solPrice)
 		fp.SetPumpfun(pf)
 		fp.SetLookup(universe.Get)
+		// Now that the pump.fun client is wired, start the trending poller (its
+		// feed is pure pump.fun: biggest live coins).
+		go pollTrending(ctx, fp, c)
 
 		// Backfill pump.fun metadata for the New/Graduating feeds (off the hot
 		// path). Graduation events carry only the mint, so without this the

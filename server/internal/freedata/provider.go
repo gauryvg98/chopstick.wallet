@@ -3,6 +3,7 @@ package freedata
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sort"
 	"sync"
 	"time"
@@ -207,17 +208,43 @@ func (p *Provider) SampledPrice(mint string) (float64, bool) {
 }
 
 func (p *Provider) Trending(ctx context.Context) ([]types.TrendingToken, error) {
-	tr, big, pools, err := p.gt.trending(ctx)
+	if p.pf == nil {
+		return nil, fmt.Errorf("pump.fun client not configured")
+	}
+	// Pure pump.fun — the biggest coins that have traded recently ("biggest live
+	// ones"). market_cap is SOL-denominated but proportional to USD, so its DESC
+	// order matches USD order; we carry the real usd_market_cap through.
+	coins, err := p.pf.List(ctx, "market_cap", 100)
 	if err != nil {
 		return nil, err
 	}
-	for mint, pool := range pools {
-		p.pools.Store(mint, pool)
+	const liveWindowMs = int64(6 * 60 * 60 * 1000) // traded within 6h = "live"
+	nowMs := time.Now().UnixMilli()
+	out := make([]types.TrendingToken, 0, 40)
+	for _, c := range coins {
+		if c.LastTradeMs > 0 && nowMs-c.LastTradeMs > liveWindowMs {
+			continue // dormant — not "live"
+		}
+		if c.Pool != "" {
+			p.pools.Store(c.Mint, c.Pool)
+		}
+		logo := c.LogoURI
+		out = append(out, types.TrendingToken{Token: types.Token{
+			Address:   c.Mint,
+			Symbol:    c.Symbol,
+			Name:      c.Name,
+			LogoURI:   &logo,
+			PriceUsd:  c.Price,
+			MarketCap: c.MarketCapUSD,
+		}})
+		if len(out) >= 40 {
+			break
+		}
 	}
-	p.bigMu.Lock()
-	p.big = big
-	p.bigMu.Unlock()
-	return tr, nil
+	for i := range out {
+		out[i].Rank = i + 1
+	}
+	return out, nil
 }
 
 // Big returns the BIG list: the sticky curated baseline merged with whatever
@@ -252,53 +279,41 @@ func (p *Provider) Big() []types.TrendingToken {
 // authoritative curated call 429s, we keep the existing baseline (merging in any
 // fresh top-pools). Called on a slow cadence by a background goroutine.
 func (p *Provider) RefreshBig(ctx context.Context) {
-	curated, _ := p.gt.curatedBig(ctx)
-	pools, _ := p.gt.bigPools(ctx)
-
-	// curatedBig's GeckoTerminal source lacks price-change %, so the blue-chips
-	// render a flat 0.00%. Backfill 24h/1h change from DexScreener (one batch
-	// call) where available.
-	if len(curated) > 0 {
-		mints := make([]string, 0, len(curated))
-		for _, t := range curated {
-			mints = append(mints, t.Address)
+	if p.pf == nil {
+		return
+	}
+	// Pure pump.fun — the biggest GRADUATED coins (blue-chip pump.fun tokens).
+	coins, err := p.pf.List(ctx, "market_cap", 60)
+	if err != nil {
+		return // sticky: keep last good on a transient failure
+	}
+	next := make([]types.TrendingToken, 0, 30)
+	for _, c := range coins {
+		if !c.Complete {
+			continue // graduated (migrated to a DEX) only
 		}
-		if ch := p.dex.changes(ctx, mints); len(ch) > 0 {
-			for i := range curated {
-				if c, ok := ch[curated[i].Address]; ok {
-					curated[i].Change24h = c[0]
-					curated[i].Change1h = c[1]
-				}
-			}
+		if c.Pool != "" {
+			p.pools.Store(c.Mint, c.Pool)
+		}
+		logo := c.LogoURI
+		next = append(next, types.TrendingToken{Token: types.Token{
+			Address:   c.Mint,
+			Symbol:    c.Symbol,
+			Name:      c.Name,
+			LogoURI:   &logo,
+			PriceUsd:  c.Price,
+			MarketCap: c.MarketCapUSD,
+		}})
+		if len(next) >= 30 {
+			break
 		}
 	}
-
+	if len(next) == 0 {
+		return // don't blank the list on an empty fetch
+	}
 	p.bigMu.Lock()
-	defer p.bigMu.Unlock()
-	seen := map[string]bool{}
-	var next []types.TrendingToken
-	add := func(list []types.TrendingToken) {
-		for _, t := range list {
-			if t.Address == "" || seen[t.Address] {
-				continue
-			}
-			seen[t.Address] = true
-			next = append(next, t)
-		}
-	}
-	add(curated)
-	add(pools)
-	switch {
-	case len(curated) > 0:
-		// Curated is the authoritative baseline — adopt the fresh set.
-		p.bigCurated = next
-	case len(next) > 0:
-		// Only top-pools came back — merge into the existing baseline so we never
-		// lose the curated blue-chips to a transient 429.
-		add(p.bigCurated)
-		p.bigCurated = next
-		// default: both failed → keep last good (sticky).
-	}
+	p.bigCurated = next
+	p.bigMu.Unlock()
 }
 
 func (p *Provider) Banner(ctx context.Context) ([]types.Token, error) {

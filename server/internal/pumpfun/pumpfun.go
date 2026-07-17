@@ -16,6 +16,91 @@ import (
 )
 
 const coinURL = "https://frontend-api-v3.pump.fun/coins/"
+const listURL = "https://frontend-api-v3.pump.fun/coins"
+
+// Coin is a mapped entry from the pump.fun coin list (trending / big feeds).
+type Coin struct {
+	Mint         string
+	Name         string
+	Symbol       string
+	LogoURI      string
+	MarketCapUSD float64
+	Price        float64 // USD, derived from usd_market_cap / circulating supply
+	Complete     bool    // graduated to a DEX (pump_swap / Raydium)
+	LastTradeMs  int64
+	Pool         string // AMM pool for price/OHLCV ("" while still on the bonding curve)
+}
+
+type listItem struct {
+	Mint         string  `json:"mint"`
+	Name         string  `json:"name"`
+	Symbol       string  `json:"symbol"`
+	ImageURI     string  `json:"image_uri"`
+	UsdMarketCap float64 `json:"usd_market_cap"` // USD (market_cap is SOL-denominated)
+	TotalSupply  float64 `json:"total_supply"`
+	BaseDecimals int     `json:"base_decimals"`
+	Complete     bool    `json:"complete"`
+	LastTrade    int64   `json:"last_trade_timestamp"` // unix ms
+	PumpSwapPool string  `json:"pump_swap_pool"`
+	PoolAddress  string  `json:"pool_address"`
+}
+
+// List fetches a sorted page of pump.fun coins (sort e.g. "market_cap",
+// "last_trade_timestamp"). Pure pump.fun — the source for the trending / big
+// feeds, replacing GeckoTerminal.
+func (c *Client) List(ctx context.Context, sort string, limit int) ([]Coin, error) {
+	c.throttle()
+	url := fmt.Sprintf("%s?offset=0&limit=%d&sort=%s&order=DESC&includeNsfw=false", listURL, limit, sort)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("accept", "application/json")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; SolisMarket/1.0)")
+	res, err := c.http.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("pumpfun list -> %d", res.StatusCode)
+	}
+	var items []listItem
+	if err := json.NewDecoder(res.Body).Decode(&items); err != nil {
+		return nil, err
+	}
+	out := make([]Coin, 0, len(items))
+	for _, it := range items {
+		if it.Mint == "" {
+			continue
+		}
+		dec := it.BaseDecimals
+		if dec == 0 {
+			dec = 6
+		}
+		supply := it.TotalSupply / math.Pow10(dec)
+		price := 0.0
+		if supply > 0 {
+			price = it.UsdMarketCap / supply
+		}
+		pool := it.PumpSwapPool
+		if pool == "" {
+			pool = it.PoolAddress
+		}
+		out = append(out, Coin{
+			Mint:         it.Mint,
+			Name:         it.Name,
+			Symbol:       it.Symbol,
+			LogoURI:      it.ImageURI,
+			MarketCapUSD: it.UsdMarketCap,
+			Price:        price,
+			Complete:     it.Complete,
+			LastTradeMs:  it.LastTrade,
+			Pool:         pool,
+		})
+	}
+	return out, nil
+}
 
 type Client struct {
 	http     *http.Client

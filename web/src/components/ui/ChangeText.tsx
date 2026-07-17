@@ -8,11 +8,16 @@ export function ChangeText({
   value,
   className,
   showArrow = true,
+  hideZero = false,
 }: {
   value: number;
   className?: string;
   showArrow?: boolean;
+  /** Render nothing when the value is exactly 0 — used where 0 means "no data"
+   *  (e.g. the pump.fun feed, whose list carries no 24h % change). */
+  hideZero?: boolean;
 }) {
+  if (hideZero && value === 0) return null;
   const up = value >= 0;
   return (
     <span

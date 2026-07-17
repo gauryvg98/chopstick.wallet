@@ -21,7 +21,7 @@ const BannerItem = memo(function BannerItem({ t }: { t: Token }) {
       <TokenAvatar symbol={t.symbol} logoURI={t.logoURI} size={22} />
       <span className="font-semibold text-sm text-white">{t.symbol}</span>
       <PriceText value={t.priceUsd} className="text-sm text-muted tnum" />
-      <ChangeText value={t.change24h} className="text-xs" />
+      <ChangeText value={t.change24h} className="text-xs" hideZero />
     </Link>
   );
 });

@@ -90,7 +90,7 @@ function TrendingRow({ t, active }: { t: TrendingToken; active: boolean }) {
         <div className="text-[13px] font-semibold text-white tnum leading-tight">
           <LiveMC mint={t.address} marketCap={t.marketCap} priceUsd={t.priceUsd} />
         </div>
-        <ChangeText value={t.change24h} className="text-xs mt-0.5" />
+        <ChangeText value={t.change24h} className="text-xs mt-0.5" hideZero />
       </div>
     </Link>
   );
