@@ -1,5 +1,7 @@
 # SolisMarket — Web
 
+**Live app:** [solismarket.vercel.app](https://solismarket.vercel.app) &nbsp;·&nbsp; **Engineering write-up:** [solismarket.vercel.app/engineering](https://solismarket.vercel.app/engineering) &nbsp;·&nbsp; **Status:** [solismarket.vercel.app/status](https://solismarket.vercel.app/status)
+
 A fomo.family-style landing page **+ a full Solana trading app** for SolisMarket
 ("the #1 meme coin trading app on Solana"). Built for the Founding Engineer screen.
 
