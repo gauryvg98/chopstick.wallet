@@ -51,17 +51,15 @@ export function useToken(address: string | null) {
   });
 }
 
-// Progressive OHLCV. Fire ONE fresh (uncached) request for the full window,
-// then REVEAL it client-side 20 bars at a time (20 → 120) so the chart snaps in
-// instantly and then visibly fills out — the "screen gets rich" effect — WITHOUT
-// firing six separate upstream requests (GeckoTerminal's free tier 429s on a
-// rapid burst, which would collapse the chart). Every load is served straight
-// off the source (GT for 1m+, the local sampler for sub-minute); GT's own CDN
-// makes re-views of the same token/frame near-instant, so we need no local
-// cache. Same name/shape as before, so the chart consumes it unchanged.
-const REVEAL_STEPS = [20, 40, 60, 80, 100, 120];
-const REVEAL_MS = 110;
-
+// Progressive OHLCV — render candles as they actually arrive. Fetch the latest
+// 20 and paint them the instant they come back (fast first paint), then fetch
+// the full window and paint that the moment it lands. Two real fetches, no fake
+// staggered reveal — and not six separate requests (GeckoTerminal's free tier
+// 429s on a rapid burst, which would collapse the chart). Every load is served
+// fresh off the source (GT for 1m+, the local sampler for sub-minute); GT's own
+// CDN makes re-views of the same token/frame near-instant, so no local cache is
+// needed. Live candles ride in on the WS candle stream (rendered as they form).
+// Same name/shape as before, so the chart consumes it unchanged.
 export function useOHLCV(address: string | null, tf: Timeframe, _fast = false) {
   const [data, setData] = useState<OHLCV[] | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
@@ -73,48 +71,41 @@ export function useOHLCV(address: string | null, tf: Timeframe, _fast = false) {
       return;
     }
     let cancelled = false;
-    const timers: ReturnType<typeof setTimeout>[] = [];
     let interval: ReturnType<typeof setInterval> | null = null;
     setIsLoading(true);
     setData(undefined); // reset on token / timeframe change
 
     const subMinute = tf === "1s" || tf === "5s" || tf === "30s";
-    const tail = (bars: OHLCV[], n: number) => bars.slice(Math.max(0, bars.length - n));
 
     // No local cache, so a transient GeckoTerminal 429 must self-heal: retry a
     // few times before giving up rather than leaving a blank chart.
-    const fetchFull = async (): Promise<OHLCV[]> => {
-      for (let attempt = 0; attempt < 4; attempt++) {
+    const fetchBars = async (limit: number, attempts: number): Promise<OHLCV[]> => {
+      for (let i = 0; i < attempts; i++) {
         if (cancelled) return [];
         try {
-          const bars = await client.getOHLCV(address, tf, 120);
+          const bars = await client.getOHLCV(address, tf, limit);
           if (bars && bars.length) return bars;
         } catch {
           /* retry */
         }
-        await new Promise((r) => setTimeout(r, 1500));
+        if (i < attempts - 1) await new Promise((r) => setTimeout(r, 1200));
       }
       return [];
     };
 
     (async () => {
-      const full = await fetchFull();
+      // 1) latest 20 — render the moment they arrive.
+      const first = await fetchBars(20, 2);
       if (cancelled) return;
-      if (!full.length) {
+      if (first.length) {
+        setData(first);
         setIsLoading(false);
-        return;
       }
-      // Reveal the latest 20 first (instant paint), then grow to the full set.
-      REVEAL_STEPS.forEach((n, i) => {
-        if (n >= full.length && i > 0 && REVEAL_STEPS[i - 1] >= full.length) return;
-        timers.push(
-          setTimeout(() => {
-            if (cancelled) return;
-            setData(tail(full, n));
-            setIsLoading(false);
-          }, i * REVEAL_MS)
-        );
-      });
+      // 2) full window — render as soon as we get it.
+      const full = await fetchBars(120, 4);
+      if (cancelled) return;
+      if (full.length) setData(full);
+      setIsLoading(false);
     })();
 
     // Sub-minute history grows from the live sampler, so keep re-pulling the
@@ -132,7 +123,6 @@ export function useOHLCV(address: string | null, tf: Timeframe, _fast = false) {
 
     return () => {
       cancelled = true;
-      timers.forEach(clearTimeout);
       if (interval) clearInterval(interval);
     };
   }, [address, tf]);
