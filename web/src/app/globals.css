@@ -151,3 +151,17 @@
   transition: transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .rd-sep { display: inline-block; white-space: pre; }
+
+/* Directional tick colour: the whole readout flashes green on an up-tick / red
+   on a down-tick, then eases back to its base colour once ticks pause. Applied
+   to the wrapper so digits + subscript + prefix shift together (colour inherits
+   into the rolling strips). The lit state has transition-duration:0 so the
+   colour lands in lockstep with the roll; the base .roll-dir owns the ease-back.
+   Doubled class (.roll-dir.roll-up) outweighs single-class text-* utilities so
+   it wins over the readout's base colour without !important. */
+.roll-dir { transition: color 0.6s ease-out; }
+.roll-dir.roll-up { color: var(--color-up); transition-duration: 0s; }
+.roll-dir.roll-down { color: var(--color-down); transition-duration: 0s; }
+@media (prefers-reduced-motion: reduce) {
+  .roll-dir { transition: none; }
+}
