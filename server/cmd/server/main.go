@@ -23,12 +23,13 @@ import (
 	"solismarket/server/internal/helius"
 	"solismarket/server/internal/httpapi"
 	"solismarket/server/internal/jupiter"
+	"solismarket/server/internal/livestats"
 	"solismarket/server/internal/livetrades"
 	"solismarket/server/internal/metrics"
 	"solismarket/server/internal/mockdata"
 	"solismarket/server/internal/provider"
+	"solismarket/server/internal/pumpapi"
 	"solismarket/server/internal/pumpfun"
-	"solismarket/server/internal/pumpportal"
 	"solismarket/server/internal/types"
 	"solismarket/server/internal/ws"
 )
@@ -168,20 +169,35 @@ func main() {
 		})
 		go universe.EnrichMeta(ctx)
 
-		// Live price line: sample pump.fun price for viewed bonding-curve tokens
-		// (keyless). Real bonding-curve trades need a funded PumpPortal key, so
-		// they stay empty unless PUMPPORTAL_API_KEY is set.
+		// Live bonding-curve data comes from the pump.fun firehose (stream.pumpapi.io,
+		// keyless): every create/trade/migration, with the trader's wallet and the
+		// post-trade curve reserves. This feeds the real trades panel and a live
+		// price line built from actual fills. The pump.fun poll sampler stays as a
+		// fallback for tokens too quiet to produce trades while being viewed.
 		sampler := pumpfun.NewSampler(pf)
 		go sampler.Run(ctx)
 
 		trades := livetrades.New()
-		pp := pumpportal.New(universe.AddNew, universe.AddMigration, trades.Add, solPrice, os.Getenv("PUMPPORTAL_API_KEY"))
+		// Rolling volume/change per mint from every firehose trade (all pools) —
+		// powers the graduated feeds' live "moving now" numbers + volume ranking.
+		stats := livestats.New()
+		go stats.Run(ctx)
+		pa := pumpapi.New(universe.AddNew, universe.AddMigration, trades.Add, stats.Observe, solPrice)
 		ensureSub := func(mint string) {
 			sampler.Watch(mint)
-			pp.EnsureTradeSub(mint)
+			pa.Watch(mint)
 		}
-		fp.SetLive(ensureSub, trades.Trades, sampler.Candles)
-		go pp.Run(ctx)
+		// Prefer the real trade-built candle line; fall back to the sampler when a
+		// viewed token hasn't produced buffered trades yet.
+		liveCandles := func(mint string) []types.OHLCV {
+			if cs := trades.Candles(mint); len(cs) > 0 {
+				return cs
+			}
+			return sampler.Candles(mint)
+		}
+		fp.SetLive(ensureSub, trades.Trades, liveCandles)
+		fp.SetLiveStats(stats.Snapshot)
+		go pa.Run(ctx)
 	}
 
 	// Live price stream: push batch prices for the trending warm set + any mint

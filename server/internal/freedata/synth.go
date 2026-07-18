@@ -1,15 +1,14 @@
 package freedata
 
 import (
-	"fmt"
 	"math"
 	"strings"
-	"time"
 
 	"solismarket/server/internal/types"
 )
 
-// Deterministic synth fallbacks for holders/trades when an upstream is empty.
+// Deterministic synth fallback for holders when an upstream is empty. Trades are
+// never synthesized — a real-or-empty trades panel is honest; fake fills are not.
 
 func hash(s string) uint32 {
 	var h uint32 = 2166136261
@@ -82,30 +81,6 @@ func synthHolders(mint string, price, supply float64) []types.Holder {
 		out = append(out, types.Holder{
 			Rank: i + 1, Address: r.addr(), Pct: pct,
 			ValueUsd: pct / 100 * mc, TokenAmount: pct / 100 * supply,
-		})
-	}
-	return out
-}
-
-func synthTrades(mint string, price float64) []types.Trade {
-	if price == 0 {
-		price = 1
-	}
-	r := newPRNG(mint + fmt.Sprintf("%d", time.Now().Unix()/4))
-	out := make([]types.Trade, 0, 40)
-	t := time.Now().UnixMilli()
-	for i := 0; i < 40; i++ {
-		side := "sell"
-		if r.next() < 0.55 {
-			side = "buy"
-		}
-		usd := math.Exp(r.next()*6) * 12
-		t -= int64(r.next()*14000) + 800
-		hash := r.addr()
-		out = append(out, types.Trade{
-			ID: fmt.Sprintf("%s-%d", mint, i), Side: side, Trader: r.addr(),
-			AmountUsd: usd, TokenAmount: usd / price, PriceUsd: price,
-			Timestamp: t, TxHash: &hash,
 		})
 	}
 	return out

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -33,20 +34,28 @@ type Provider struct {
 	pl       *priceLine
 	extPrice func(context.Context, string) float64 // optional fresher price (Jupiter)
 
-	// live bonding-curve trades (PumpPortal), for tokens not yet on a DEX
+	// live pump.fun firehose trades, for any viewed token (curve or graduated)
 	ensureSub   func(string)
 	liveTrades  func(string) []types.Trade
 	liveCandles func(string) []types.OHLCV
+	// rolling volume/change per mint from the firehose (all pools), powering the
+	// graduated feeds' live "moving now" numbers + volume ranking.
+	liveStats func(string) (volUsd, changePct, lastPx float64, ok bool)
 }
 
-// SetLive wires the live bonding-curve trade stream: ensureSub subscribes a
-// mint, liveTrades/liveCandles read its buffered trades + price line.
+// SetLive wires the live firehose trade stream: ensureSub subscribes a mint,
+// liveTrades/liveCandles read its buffered trades + price line.
 func (p *Provider) SetLive(
 	ensureSub func(string),
 	liveTrades func(string) []types.Trade,
 	liveCandles func(string) []types.OHLCV,
 ) {
 	p.ensureSub, p.liveTrades, p.liveCandles = ensureSub, liveTrades, liveCandles
+}
+
+// SetLiveStats wires the rolling volume/change lookup (livestats.Snapshot).
+func (p *Provider) SetLiveStats(fn func(string) (float64, float64, float64, bool)) {
+	p.liveStats = fn
 }
 
 func New(he *helius.Client) *Provider {
@@ -229,14 +238,16 @@ func (p *Provider) Trending(ctx context.Context) ([]types.TrendingToken, error) 
 			p.pools.Store(c.Mint, c.Pool)
 		}
 		logo := c.LogoURI
-		out = append(out, types.TrendingToken{Token: types.Token{
+		t := types.TrendingToken{Token: types.Token{
 			Address:   c.Mint,
 			Symbol:    c.Symbol,
 			Name:      c.Name,
 			LogoURI:   &logo,
 			PriceUsd:  c.Price,
 			MarketCap: c.MarketCapUSD,
-		}})
+		}}
+		p.attachLiveStats(&t.Token, c.Pool)
+		out = append(out, t)
 		if len(out) >= 40 {
 			break
 		}
@@ -245,6 +256,29 @@ func (p *Provider) Trending(ctx context.Context) ([]types.TrendingToken, error) 
 		out[i].Rank = i + 1
 	}
 	return out, nil
+}
+
+// firehosePrimary reports whether a token's trades live primarily on the
+// pump.fun firehose. pump-native pools (the bonding curve + pump-amm, where
+// fresh graduates land) are fully covered; established graduates trading on
+// raydium/other venues are not, so their firehose stats would be a misleading
+// partial view — we leave those to the DEX sources instead.
+func firehosePrimary(pool string) bool {
+	return pool == "pump" || strings.Contains(pool, "pump-amm") || strings.Contains(pool, "pumpswap")
+}
+
+// attachLiveStats overlays real rolling volume + change from the firehose, but
+// only for pump-native tokens (see firehosePrimary) and only once the token has
+// actually traded in the window — otherwise it's a no-op and the card shows no
+// change rather than a fabricated or partial one.
+func (p *Provider) attachLiveStats(t *types.Token, pool string) {
+	if p.liveStats == nil || !firehosePrimary(pool) {
+		return
+	}
+	if vol, change, _, ok := p.liveStats(t.Address); ok {
+		t.Volume24h = vol
+		t.Change24h = change
+	}
 }
 
 // Big returns the BIG list: the sticky curated baseline merged with whatever
@@ -296,14 +330,16 @@ func (p *Provider) RefreshBig(ctx context.Context) {
 			p.pools.Store(c.Mint, c.Pool)
 		}
 		logo := c.LogoURI
-		next = append(next, types.TrendingToken{Token: types.Token{
+		t := types.TrendingToken{Token: types.Token{
 			Address:   c.Mint,
 			Symbol:    c.Symbol,
 			Name:      c.Name,
 			LogoURI:   &logo,
 			PriceUsd:  c.Price,
 			MarketCap: c.MarketCapUSD,
-		}})
+		}}
+		p.attachLiveStats(&t.Token, c.Pool) // real volume/change for pump-native tokens
+		next = append(next, t)
 		if len(next) >= 30 {
 			break
 		}
@@ -474,7 +510,7 @@ func (p *Provider) Holders(ctx context.Context, mint string) ([]types.Holder, er
 func (p *Provider) Trades(ctx context.Context, mint string) ([]types.Trade, error) {
 	pool, err := p.poolFor(ctx, mint)
 	if err != nil {
-		// Bonding-curve token — subscribe + serve real PumpPortal trades.
+		// Bonding-curve token — subscribe + serve real pump.fun firehose trades.
 		if p.ensureSub != nil {
 			p.ensureSub(mint)
 		}
@@ -483,13 +519,24 @@ func (p *Provider) Trades(ctx context.Context, mint string) ([]types.Trade, erro
 		}
 		return []types.Trade{}, nil
 	}
+	// Graduated/DEX token — prefer the pump.fun firehose (real, sub-second, and
+	// already streaming) once this token's trades have buffered; GeckoTerminal is
+	// the cold-start + outage fallback. We never fabricate fills.
+	if p.ensureSub != nil {
+		p.ensureSub(mint)
+	}
+	if p.liveTrades != nil {
+		if lt := p.liveTrades(mint); len(lt) > 0 {
+			return lt, nil
+		}
+	}
 	var price float64
 	if td, _, e := p.dex.token(ctx, mint); e == nil {
 		price = td.PriceUsd
 	}
 	tr, err := p.gt.trades(ctx, pool, price)
-	if err != nil || len(tr) == 0 {
-		return synthTrades(mint, price), nil
+	if err != nil {
+		return nil, err
 	}
 	return tr, nil
 }
