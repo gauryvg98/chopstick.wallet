@@ -155,12 +155,18 @@ func (c *Client) stream(ctx context.Context) error {
 		}
 		switch e.TxType {
 		case "create":
+			// Pure pump.fun: PumpPortal's new-token stream is pump.fun today
+			// (pool="pump"), but guard against other launchpads (bonk, moonshot)
+			// if they're ever added — "pump" is pump.fun's bonding-curve pool.
+			if e.Pool != "" && e.Pool != "pump" {
+				continue
+			}
 			c.onNew(c.discovery(e, "new"))
 		case "buy", "sell":
 			if c.onTrade != nil {
 				c.onTrade(e.Mint, c.trade(e))
 			}
-		default: // migrate / graduation
+		default: // migrate / graduation (pump.fun tokens graduating to a DEX)
 			c.onMigrate(c.discovery(e, "graduating"))
 		}
 	}
