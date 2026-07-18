@@ -104,6 +104,20 @@ func (s *Store) Snapshot(mint string) (volUsd, changePct, lastPx float64, ok boo
 	return volUsd, changePct, lastPx, true
 }
 
+// LastPrice returns a mint's most recent firehose trade price, if it has traded
+// within the window. Cheap (one map read) so the ws hub can poll it fast to push
+// per-trade-fresh prices for the tokens clients are watching.
+func (s *Store) LastPrice(mint string) (float64, bool) {
+	floor := time.Now().Unix()/60 - windowMin + 1
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	st := s.m[mint]
+	if st == nil || st.lastMin < floor || st.lastPx <= 0 {
+		return 0, false
+	}
+	return st.lastPx, true
+}
+
 // Run sweeps out mints that have gone quiet (and enforces the hard cap) once a
 // minute, keeping the map bounded to what's actually trading.
 func (s *Store) Run(ctx context.Context) {

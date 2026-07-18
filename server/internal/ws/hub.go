@@ -41,6 +41,7 @@ type Hub struct {
 	candleSubs map[string]map[*Client]bool // who wants this (mint,tf) stream
 	candleBars map[string]*candleBar        // the forming bar per (mint,tf)
 	sampled    func(string) (float64, bool) // fallback price for non-Jupiter mints
+	livePrice  func(string) (float64, bool) // per-trade firehose price (pump tokens)
 
 	// discover feed streaming (one global feed)
 	discoverSubs map[*Client]bool
@@ -110,6 +111,7 @@ func NewHub(pricer Pricer, warm func() []string) *Hub {
 
 func (h *Hub) Run(ctx context.Context) {
 	go h.priceLoop(ctx)
+	go h.firehosePriceLoop(ctx)
 	go h.discoverLoop(ctx)
 	go h.tradesLoop(ctx)
 	for {
@@ -254,6 +256,77 @@ func (h *Hub) PriceOf(mint string) (float64, bool) {
 // SetSampledPrice wires a fallback price source (the provider's sampler) used
 // to build candles for mints Jupiter doesn't price.
 func (h *Hub) SetSampledPrice(fn func(string) (float64, bool)) { h.sampled = fn }
+
+// SetLivePrice wires the per-trade firehose price (livestats.LastPrice). It's
+// polled fast (below) so a subscribed pump.fun token's price ticks on its actual
+// fills instead of Jupiter's ~1s cadence — the difference between a page that
+// pulses and one that looks frozen.
+func (h *Hub) SetLivePrice(fn func(string) (float64, bool)) { h.livePrice = fn }
+
+// firehosePriceLoop pushes trade-fresh prices for subscribed mints ~5×/s. It
+// layers on top of the Jupiter loop: Jupiter still supplies change24h and prices
+// for tokens the firehose doesn't cover (established graduates), while this makes
+// actively-trading pump tokens tick on every fill. Only mints whose price
+// actually moved are sent, so a quiet token costs nothing.
+func (h *Hub) firehosePriceLoop(ctx context.Context) {
+	const iv = 200 * time.Millisecond
+	t := time.NewTicker(iv)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+		}
+		if h.livePrice == nil || h.count.Load() == 0 {
+			continue
+		}
+		// Snapshot the subscribed set without holding the lock across livePrice.
+		h.mu.Lock()
+		mints := make([]string, 0, len(h.subs))
+		for m := range h.subs {
+			mints = append(mints, m)
+		}
+		h.mu.Unlock()
+
+		type upd struct {
+			mint string
+			px   float64
+		}
+		var updates []upd
+		for _, m := range mints {
+			if px, ok := h.livePrice(m); ok {
+				updates = append(updates, upd{m, px})
+			}
+		}
+		if len(updates) == 0 {
+			continue
+		}
+
+		batch := make(map[string]jupiter.PriceTick, len(updates))
+		h.mu.Lock()
+		for _, u := range updates {
+			prev := h.lastPrices[u.mint]
+			if prev.Price == u.px {
+				continue // unchanged — don't spam a still price
+			}
+			prev.Price = u.px // keep the last known change24h
+			h.lastPrices[u.mint] = prev
+			batch[u.mint] = prev
+		}
+		h.mu.Unlock()
+		if len(batch) == 0 {
+			continue
+		}
+		if msg, err := json.Marshal(map[string]any{"type": "prices", "data": batch}); err == nil {
+			select {
+			case h.broadcast <- msg:
+			case <-ctx.Done():
+				return
+			}
+		}
+	}
+}
 
 // CandleKey identifies one actively-streamed chart.
 type CandleKey struct{ Mint, Tf string }

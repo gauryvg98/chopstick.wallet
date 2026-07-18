@@ -62,6 +62,7 @@ func main() {
 	var prov provider.Provider
 	var discover func() ([]types.DiscoveryToken, []types.DiscoveryToken)
 	var fp *freedata.Provider // concrete handle for post-hub wiring
+	var firehosePrice func(string) (float64, bool) // per-trade price, wired into the hub below
 
 	if os.Getenv("USE_MOCK") == "1" {
 		prov = mockdata.New()
@@ -197,6 +198,7 @@ func main() {
 		}
 		fp.SetLive(ensureSub, trades.Trades, liveCandles)
 		fp.SetLiveStats(stats.Snapshot)
+		firehosePrice = stats.LastPrice // hub pushes these per-trade (wired below)
 		go pa.Run(ctx)
 	}
 
@@ -234,6 +236,7 @@ func main() {
 	}
 	hub := ws.NewHub(jup, warm)
 	hub.SetObserver(mx.Observe)
+	hub.SetLivePrice(firehosePrice) // trade-fresh prices for pump tokens (nil-safe)
 	go hub.Run(ctx)
 
 	// Push the discover feed (new + graduating + trending) over the websocket so
