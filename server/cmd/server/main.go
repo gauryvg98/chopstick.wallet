@@ -10,11 +10,9 @@ import (
 	"bufio"
 	"context"
 	"log"
-	"math"
 	"net/http"
 	"os"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"solismarket/server/internal/cache"
@@ -34,7 +32,6 @@ import (
 	"solismarket/server/internal/ws"
 )
 
-const solMint = "So11111111111111111111111111111111111111112"
 
 func main() {
 	loadDotEnv(".env")
@@ -63,6 +60,7 @@ func main() {
 	var discover func() ([]types.DiscoveryToken, []types.DiscoveryToken)
 	var fp *freedata.Provider // concrete handle for post-hub wiring
 	var pushTick func(mint string, price float64) // per-trade price push, wired to the hub below
+	var priceFeed *pumpfun.PriceFeed              // pump.fun prices for the hub (replaces Jupiter)
 
 	if os.Getenv("USE_MOCK") == "1" {
 		prov = mockdata.New()
@@ -118,23 +116,29 @@ func main() {
 		}
 		log.Printf("data source: free — DexScreener + GeckoTerminal + %s (keyless)", holders)
 
-		// Real-time discovery: stream new launches + migrations from PumpPortal
-		// into an in-memory universe. mcap (in SOL) is converted with a SOL/USD
-		// price refreshed off Jupiter.
+		// Real-time discovery: stream new launches + migrations into an in-memory
+		// universe. Everything is priced from pump.fun — no Jupiter.
 		universe := discovery.New()
 		discover = universe.Snapshot
-		var solBits atomic.Uint64
-		solPrice := func() float64 { return math.Float64frombits(solBits.Load()) }
+		// SOL/USD + graduated-token prices come from pump.fun's List (refreshed just
+		// below, once the client exists). solPrice reads the derived rate.
+		priceFeed = pumpfun.NewPriceFeed()
+		solPrice := priceFeed.Sol
+		// Serve brand-new bonding-curve tokens (not yet on a DEX) from pump.fun,
+		// falling back to whatever the discovery stream saw.
+		pf := pumpfun.New(solPrice)
+		fp.SetPumpfun(pf)
+		fp.SetLookup(universe.Get)
+		// Refresh the pump.fun price feed (SOL rate + graduated-token prices) every
+		// 5s — this is the hub's price source in place of Jupiter's poll.
 		go func() {
 			refresh := func() {
-				if p, err := jup.Prices(ctx, []string{solMint}); err == nil {
-					if v, ok := p[solMint]; ok {
-						solBits.Store(math.Float64bits(v.Price))
-					}
+				if coins, err := pf.List(ctx, "market_cap", 100); err == nil && len(coins) > 0 {
+					priceFeed.Refresh(coins)
 				}
 			}
 			refresh()
-			t := time.NewTicker(30 * time.Second)
+			t := time.NewTicker(5 * time.Second)
 			defer t.Stop()
 			for {
 				select {
@@ -145,11 +149,6 @@ func main() {
 				}
 			}
 		}()
-		// Serve brand-new bonding-curve tokens (not yet on a DEX) from pump.fun,
-		// falling back to whatever the discovery stream saw.
-		pf := pumpfun.New(solPrice)
-		fp.SetPumpfun(pf)
-		fp.SetLookup(universe.Get)
 		// Now that the pump.fun client is wired, start the trending poller (its
 		// feed is pure pump.fun: biggest live coins).
 		go pollTrending(ctx, fp, c)
@@ -183,16 +182,15 @@ func main() {
 		// powers the graduated feeds' live "moving now" numbers + volume ranking.
 		stats := livestats.New()
 		go stats.Run(ctx)
-		// Every pump-native trade both updates livestats AND pushes an individual
-		// price tick to the ws hub the instant it arrives (pushTick wired after the
-		// hub exists) — no batching, freshest possible data per subscribed mint.
-		onStat := func(mint string, volUsd, priceUsd float64) {
-			stats.Observe(mint, volUsd, priceUsd)
+		// onPrice pushes each bonding-curve trade's price to the ws hub the instant
+		// it arrives (pushTick wired after the hub exists) — individual per-mint
+		// ticks, freshest possible. onStat feeds livestats (volume) separately.
+		onPrice := func(mint string, priceUsd float64) {
 			if pushTick != nil {
 				pushTick(mint, priceUsd)
 			}
 		}
-		pa := pumpapi.New(universe.AddNew, universe.AddMigration, trades.Add, onStat, solPrice)
+		pa := pumpapi.New(universe.AddNew, universe.AddMigration, trades.Add, stats.Observe, onPrice, solPrice)
 		ensureSub := func(mint string) {
 			sampler.Watch(mint)
 			pa.Watch(mint)
@@ -312,7 +310,7 @@ func main() {
 		}
 		return out
 	}
-	hub := ws.NewHub(jup, warm)
+	hub := ws.NewHub(priceFeed, warm)
 	hub.SetObserver(mx.Observe)
 	pushTick = hub.PushPrice // firehose trades now push individual ticks (nil-safe until here)
 	go hub.Run(ctx)

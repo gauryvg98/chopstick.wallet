@@ -196,3 +196,9 @@ func (t Timeframe) BucketSeconds() int64 {
 func (t Timeframe) SubMinute() bool {
 	return t == Tf1s || t == Tf5s || t == Tf30s
 }
+
+// PriceTick is one mint's live price payload pushed over the websocket.
+type PriceTick struct {
+	Price     float64 `json:"price"`
+	Change24h float64 `json:"change24h"`
+}

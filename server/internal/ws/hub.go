@@ -1,7 +1,6 @@
-// Package ws is a small websocket hub that pushes live price ticks to clients.
-// One background loop batch-fetches prices (Jupiter, keyless) for the union of
-// all clients' subscribed mints plus the trending warm set, and broadcasts —
-// so N clients cost one upstream poll, not N.
+// Package ws is a small websocket hub that pushes live per-mint price ticks to
+// the clients watching each mint. Graduated tokens are priced from the pump.fun
+// feed; bonding-curve tokens tick live off the firehose. No Jupiter.
 package ws
 
 import (
@@ -15,12 +14,12 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"solismarket/server/internal/jupiter"
+	"solismarket/server/internal/types"
 )
 
 // Pricer batch-fetches prices for many mints.
 type Pricer interface {
-	Prices(ctx context.Context, mints []string) (map[string]jupiter.PriceTick, error)
+	Prices(ctx context.Context, mints []string) (map[string]types.PriceTick, error)
 }
 
 type Hub struct {
@@ -35,12 +34,7 @@ type Hub struct {
 
 	mu         sync.Mutex
 	priceSubs  map[string]map[*Client]bool // mint -> clients watching it (per-mint fan-out)
-	lastPrices map[string]jupiter.PriceTick
-	// Mints Jupiter can price (graduated / DEX-listed). The firehose price is only
-	// for tokens Jupiter CAN'T price (fresh bonding-curve) — for anything Jupiter
-	// prices, its value is authoritative and the firehose must not override it, or
-	// a bad pump-pool tick makes the header flicker to a garbage price.
-	jupPriced map[string]bool
+	lastPrices map[string]types.PriceTick
 
 	// live candle streaming, keyed by "mint|tf"
 	candleSubs map[string]map[*Client]bool // who wants this (mint,tf) stream
@@ -100,8 +94,7 @@ func NewHub(pricer Pricer, warm func() []string) *Hub {
 		broadcast:  make(chan []byte, 8),
 		clients:    make(map[*Client]bool),
 		priceSubs:  make(map[string]map[*Client]bool),
-		lastPrices: make(map[string]jupiter.PriceTick),
-		jupPriced:  make(map[string]bool),
+		lastPrices: make(map[string]types.PriceTick),
 		candleSubs:   make(map[string]map[*Client]bool),
 		candleBars:   make(map[string]*candleBar),
 		discoverSubs: make(map[*Client]bool),
@@ -145,14 +138,10 @@ func (h *Hub) Run(ctx context.Context) {
 	}
 }
 
-// priceLoop fetches prices off the hub goroutine so a slow upstream never blocks
-// client registration / broadcast. One batched Jupiter call covers every tracked
-// mint, so the upstream cost is the tick rate (not the number of tokens).
-//
-// Jupiter's free tier can't sustain a sub-second cadence forever, so the loop is
-// ADAPTIVE: it polls at ~1s normally, but on an error/429 it backs off
-// exponentially (up to 8s) and recovers to the base rate once Jupiter is happy
-// again. This keeps live prices flowing instead of getting stuck rate-limited.
+// priceLoop pushes graduated-token prices from the pump.fun feed (Pricer, a cheap
+// in-memory read) and drives the live candle streams. Bonding-curve tokens are
+// priced live off the firehose via PushPrice, not here. Runs ~1s; backs off on a
+// (rare) empty read.
 func (h *Hub) priceLoop(ctx context.Context) {
 	const base = 1000 * time.Millisecond
 	const maxIv = 8 * time.Second
@@ -181,7 +170,6 @@ func (h *Hub) priceLoop(ctx context.Context) {
 			h.mu.Lock()
 			for m, p := range prices {
 				h.lastPrices[m] = p
-				h.jupPriced[m] = true // Jupiter owns this mint's price
 			}
 			h.mu.Unlock()
 			// Fan out each mint to only the clients watching it — no global map.
@@ -232,7 +220,7 @@ func (h *Hub) mints() []string {
 // waiting for the next tick.
 func (h *Hub) addSubs(c *Client, mints []string) {
 	h.mu.Lock()
-	snap := make(map[string]jupiter.PriceTick, len(mints))
+	snap := make(map[string]types.PriceTick, len(mints))
 	for _, m := range mints {
 		if h.priceSubs[m] == nil {
 			h.priceSubs[m] = map[*Client]bool{}
@@ -281,7 +269,7 @@ func (h *Hub) delPriceSubsForClient(c *Client) {
 
 // sendTick pushes one mint's price to just the clients watching it — an
 // individual, freshest-possible tick, never a batched global map.
-func (h *Hub) sendTick(mint string, tick jupiter.PriceTick) {
+func (h *Hub) sendTick(mint string, tick types.PriceTick) {
 	h.mu.Lock()
 	subs := h.priceSubs[mint]
 	if len(subs) == 0 {
@@ -294,7 +282,7 @@ func (h *Hub) sendTick(mint string, tick jupiter.PriceTick) {
 	}
 	h.mu.Unlock()
 	msg, err := json.Marshal(map[string]any{
-		"type": "prices", "data": map[string]jupiter.PriceTick{mint: tick},
+		"type": "prices", "data": map[string]types.PriceTick{mint: tick},
 	})
 	if err != nil {
 		return
@@ -307,16 +295,16 @@ func (h *Hub) sendTick(mint string, tick jupiter.PriceTick) {
 	}
 }
 
-// PushPrice delivers a per-trade firehose price the instant it arrives, straight
-// to the mint's subscribers. Skips mints Jupiter prices (it's authoritative for
-// graduated tokens) and no-ops when nobody's watching, so the global firehose
-// costs a cheap map lookup per trade.
+// PushPrice delivers a live price the instant it arrives, straight to the mint's
+// subscribers. Fed by the firehose (per-trade, bonding-curve tokens) and the
+// pump.fun price feed (graduated tokens). No-ops when nobody's watching, so the
+// firehose costs a cheap map lookup per trade.
 func (h *Hub) PushPrice(mint string, price float64) {
 	if price <= 0 {
 		return
 	}
 	h.mu.Lock()
-	if h.jupPriced[mint] || len(h.priceSubs[mint]) == 0 {
+	if len(h.priceSubs[mint]) == 0 {
 		h.mu.Unlock()
 		return
 	}

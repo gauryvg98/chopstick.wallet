@@ -25,6 +25,7 @@ type Coin struct {
 	Symbol       string
 	LogoURI      string
 	MarketCapUSD float64
+	MarketCapSol float64 // SOL-denominated market cap (for deriving SOL/USD)
 	Price        float64 // USD, derived from usd_market_cap / circulating supply
 	Complete     bool    // graduated to a DEX (pump_swap / Raydium)
 	LastTradeMs  int64
@@ -37,6 +38,7 @@ type listItem struct {
 	Symbol       string  `json:"symbol"`
 	ImageURI     string  `json:"image_uri"`
 	UsdMarketCap float64 `json:"usd_market_cap"` // USD (market_cap is SOL-denominated)
+	MarketCap    float64 `json:"market_cap"`    // SOL-denominated
 	TotalSupply  float64 `json:"total_supply"`
 	BaseDecimals int     `json:"base_decimals"`
 	Complete     bool    `json:"complete"`
@@ -93,6 +95,7 @@ func (c *Client) List(ctx context.Context, sort string, limit int) ([]Coin, erro
 			Symbol:       it.Symbol,
 			LogoURI:      it.ImageURI,
 			MarketCapUSD: it.UsdMarketCap,
+			MarketCapSol: it.MarketCap,
 			Price:        price,
 			Complete:     it.Complete,
 			LastTradeMs:  it.LastTrade,

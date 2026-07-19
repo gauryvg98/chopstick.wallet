@@ -46,6 +46,7 @@ type Client struct {
 	onMigrate func(types.DiscoveryToken)
 	onTrade   func(mint string, t types.Trade)
 	onStat    func(mint string, volUsd, priceUsd float64)
+	onPrice   func(mint string, priceUsd float64) // live price push, bonding-curve only
 	solPrice  func() float64
 
 	mu      sync.Mutex
@@ -56,11 +57,12 @@ func New(
 	onNew, onMigrate func(types.DiscoveryToken),
 	onTrade func(string, types.Trade),
 	onStat func(string, float64, float64),
+	onPrice func(string, float64),
 	solPrice func() float64,
 ) *Client {
 	return &Client{
 		onNew: onNew, onMigrate: onMigrate, onTrade: onTrade, onStat: onStat,
-		solPrice: solPrice, watched: make(map[string]time.Time),
+		onPrice: onPrice, solPrice: solPrice, watched: make(map[string]time.Time),
 	}
 }
 
@@ -184,13 +186,16 @@ func (c *Client) dispatch(e event) {
 		// feeds the rolling volume/change stats — that's what powers the graduated
 		// feeds' "moving now" numbers and volume ranking.
 		usd, price := c.metrics(e)
-		// livestats tracks pump.fun-native tokens. pump's curve and pump-amm (its
-		// own AMM, where most trading happens post-graduation) both quote price in
-		// SOL, so `price * sol` is correct. EXTERNAL pools (meteora/raydium) quote
-		// in their own token (often USDC) — `price * sol` there is garbage — so we
-		// exclude them. The banner's sanity filter catches any residual anomaly.
+		// livestats (volume): pump + pump-amm both quote SOL, so usd is correct.
+		// External pools (meteora/raydium) quote in their own token — excluded.
 		if c.onStat != nil && strings.Contains(e.Pool, "pump") {
 			c.onStat(e.Mint, usd, price)
+		}
+		// Live price push: ONLY the bonding curve ("pump") gives a clean SOL/token
+		// price (price*sol). pump-amm's price field is off-scale, so graduated
+		// tokens are priced from pump.fun's List instead, not here.
+		if c.onPrice != nil && e.Pool == "pump" {
+			c.onPrice(e.Mint, price)
 		}
 		// The detailed per-trade buffer (the trades panel) is bounded, so only
 		// viewed mints get one — but now on ANY pool, so a graduated token's panel
