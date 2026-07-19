@@ -184,7 +184,12 @@ func (c *Client) dispatch(e event) {
 		// feeds the rolling volume/change stats — that's what powers the graduated
 		// feeds' "moving now" numbers and volume ranking.
 		usd, price := c.metrics(e)
-		if c.onStat != nil {
+		// livestats tracks pump.fun-native tokens. pump's curve and pump-amm (its
+		// own AMM, where most trading happens post-graduation) both quote price in
+		// SOL, so `price * sol` is correct. EXTERNAL pools (meteora/raydium) quote
+		// in their own token (often USDC) — `price * sol` there is garbage — so we
+		// exclude them. The banner's sanity filter catches any residual anomaly.
+		if c.onStat != nil && strings.Contains(e.Pool, "pump") {
 			c.onStat(e.Mint, usd, price)
 		}
 		// The detailed per-trade buffer (the trades panel) is bounded, so only
@@ -215,16 +220,17 @@ func (c *Client) discovery(e event, status string) types.DiscoveryToken {
 	}
 }
 
-// metrics derives the trade's USD size + USD price. Price from post-trade
-// bonding-curve reserves is the ground truth; on pools that don't carry reserves
-// (pump-amm/raydium/meteora) the firehose's own `price` field is used instead.
+// metrics derives the trade's USD size + USD price. The firehose's own `price`
+// field (the actual executed price, in SOL/token) is authoritative — reserve
+// division is only a fallback, because a trade with off/rounded reserve fields
+// makes VQuote/VTokens blow up into a garbage price (e.g. a $3K token at $471).
 func (c *Client) metrics(e event) (usd, price float64) {
 	sol := c.solPrice()
 	switch {
-	case e.VTokens > 0:
-		price = (e.VQuote / e.VTokens) * sol
 	case e.Price > 0:
 		price = e.Price * sol
+	case e.VTokens > 0:
+		price = (e.VQuote / e.VTokens) * sol
 	}
 	usd = e.QuoteAmount * sol
 	return usd, price

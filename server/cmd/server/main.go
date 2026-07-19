@@ -200,6 +200,76 @@ func main() {
 		fp.SetLiveStats(stats.Snapshot)
 		firehosePrice = stats.LastPrice // hub pushes these per-trade (wired below)
 		go pa.Run(ctx)
+
+		// Live-movers banner: actively-trading bonding-curve tokens (the ones that
+		// pulse on the firehose), not the graduated blue-chips the old banner showed.
+		// Metadata comes from the discovery universe, price/change from livestats;
+		// the frontend subscribes these live so the ticker actually moves. Falls back
+		// to the trending list until enough movers are trading.
+		go func() {
+			t := time.NewTicker(5 * time.Second)
+			defer t.Stop()
+			build := func() {
+				news, grad := universe.Snapshot()
+				movers := make([]types.Token, 0, 18)
+				seen := map[string]bool{}
+				for _, lst := range [][]types.DiscoveryToken{news, grad} {
+					for _, d := range lst {
+						if seen[d.Address] || d.Symbol == "" {
+							continue
+						}
+						px, chg, _, ok := stats.Snapshot(d.Address)
+						if !ok || px <= 0 {
+							continue // only tokens actually trading right now
+						}
+						// Sanity: pump.fun tokens have ~1e9 supply, so a sane price is
+						// ~marketCap/1e9. Skip a token whose last tick is wildly off that
+						// (a thin-liquidity / post-graduation trade can report garbage) so
+						// the banner never shows a bogus price.
+						if d.MarketCap > 0 {
+							expected := d.MarketCap / 1e9
+							if px > expected*50 || px < expected/50 {
+								continue
+							}
+						}
+						seen[d.Address] = true
+						movers = append(movers, types.Token{
+							Address: d.Address, Symbol: d.Symbol, Name: d.Name,
+							LogoURI: d.LogoURI, PriceUsd: px, Change24h: chg, MarketCap: d.MarketCap,
+						})
+						if len(movers) >= 18 {
+							break
+						}
+					}
+				}
+				if len(movers) >= 6 {
+					c.Put("banner", movers, 10*time.Minute)
+					return
+				}
+				// Not enough movers yet (boot / quiet market) — fall back to the
+				// trending list so the banner is never empty.
+				if v, ok := c.Snapshot("trending"); ok {
+					if tr, ok := v.([]types.TrendingToken); ok && len(tr) > 0 {
+						fb := make([]types.Token, 0, 16)
+						for _, t := range tr {
+							fb = append(fb, t.Token)
+							if len(fb) >= 16 {
+								break
+							}
+						}
+						c.Put("banner", fb, 10*time.Minute)
+					}
+				}
+			}
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-t.C:
+					build()
+				}
+			}
+		}()
 	}
 
 	// Live price stream: push batch prices for the trending warm set + any mint
@@ -324,15 +394,9 @@ func pollTrending(ctx context.Context, p *freedata.Provider, c *cache.Cache) {
 		// (handlers read via Snapshot, which never re-fetches), so the value must
 		// outlive the poll cadence — the poller is the only writer.
 		c.Put("trending", tr, 10*time.Minute)
-		n := len(tr)
-		if n > 16 {
-			n = 16
-		}
-		banner := make([]types.Token, 0, n)
-		for _, t := range tr[:n] {
-			banner = append(banner, t.Token)
-		}
-		c.Put("banner", banner, 10*time.Minute)
+		// Note: the "banner" cache is owned by the live-movers poller (it prefers
+		// actively-trading bonding-curve tokens, and falls back to this trending
+		// snapshot when too few are moving).
 		return true
 	}
 	// On boot GeckoTerminal can be throttled, and there's no last-good snapshot to
