@@ -36,6 +36,11 @@ type Hub struct {
 	mu         sync.Mutex
 	subs       map[string]int // mint -> refcount across clients
 	lastPrices map[string]jupiter.PriceTick
+	// Mints Jupiter can price (graduated / DEX-listed). The firehose price is only
+	// for tokens Jupiter CAN'T price (fresh bonding-curve) — for anything Jupiter
+	// prices, its value is authoritative and the firehose must not override it, or
+	// a bad pump-pool tick makes the header flicker to a garbage price.
+	jupPriced map[string]bool
 
 	// live candle streaming, keyed by "mint|tf"
 	candleSubs map[string]map[*Client]bool // who wants this (mint,tf) stream
@@ -97,6 +102,7 @@ func NewHub(pricer Pricer, warm func() []string) *Hub {
 		clients:    make(map[*Client]bool),
 		subs:       make(map[string]int),
 		lastPrices: make(map[string]jupiter.PriceTick),
+		jupPriced:  make(map[string]bool),
 		candleSubs:   make(map[string]map[*Client]bool),
 		candleBars:   make(map[string]*candleBar),
 		discoverSubs: make(map[*Client]bool),
@@ -177,6 +183,7 @@ func (h *Hub) priceLoop(ctx context.Context) {
 			h.mu.Lock()
 			for m, p := range prices {
 				h.lastPrices[m] = p
+				h.jupPriced[m] = true // Jupiter owns this mint's price
 			}
 			h.mu.Unlock()
 			if msg, err := json.Marshal(map[string]any{"type": "prices", "data": prices}); err == nil {
@@ -306,6 +313,9 @@ func (h *Hub) firehosePriceLoop(ctx context.Context) {
 		batch := make(map[string]jupiter.PriceTick, len(updates))
 		h.mu.Lock()
 		for _, u := range updates {
+			if h.jupPriced[u.mint] {
+				continue // Jupiter prices this mint — never override with a pump-pool tick
+			}
 			prev := h.lastPrices[u.mint]
 			if prev.Price == u.px {
 				continue // unchanged — don't spam a still price
