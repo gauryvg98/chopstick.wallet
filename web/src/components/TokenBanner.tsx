@@ -6,13 +6,18 @@ import { useBanner } from "@/lib/api/hooks";
 import { TokenAvatar } from "@/components/ui/TokenAvatar";
 import { ChangeText } from "@/components/ui/ChangeText";
 import { PriceText } from "@/components/ui/PriceText";
+import { useLivePrice } from "@/lib/livePrices";
 import type { Token } from "@/lib/api/types";
 import { cn } from "@/lib/cn";
 
-// A scrolling ticker must not reflow mid-animation, so the price is STATIC here
-// (a live WS price changes width every tick and stutters the marquee). memo()
-// keeps items from re-rendering on unrelated parent updates.
+// Live ticker. The roll is width-stable (tabular-nums + fixed-width formatting),
+// so a live price no longer reflows the marquee the way the old variable-width
+// text did — we can stream it. Falls back to the snapshot price until the first
+// tick arrives. memo() keeps items from re-rendering on unrelated parent updates.
 const BannerItem = memo(function BannerItem({ t }: { t: Token }) {
+  const { price, change24h } = useLivePrice(t.address);
+  const p = price && price > 0 ? price : t.priceUsd;
+  const chg = change24h ?? t.change24h;
   return (
     <Link
       href={`/trade/${t.address}`}
@@ -20,8 +25,8 @@ const BannerItem = memo(function BannerItem({ t }: { t: Token }) {
     >
       <TokenAvatar symbol={t.symbol} logoURI={t.logoURI} size={22} />
       <span className="font-semibold text-sm text-white">{t.symbol}</span>
-      <PriceText value={t.priceUsd} className="text-sm text-muted tnum" directional={false} />
-      <ChangeText value={t.change24h} className="text-xs" hideZero />
+      <PriceText value={p} className="text-sm text-muted tnum" />
+      <ChangeText value={chg} className="text-xs" hideZero />
     </Link>
   );
 });

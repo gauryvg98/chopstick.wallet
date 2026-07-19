@@ -39,23 +39,46 @@ function createPriceStore() {
   const prices = new Map<string, Tick>();
   const listeners = new Map<string, Set<() => void>>();
   const pending = new Set<string>();
+  const lastNotified = new Map<string, number>();
   let raf: number | null = null;
+  let timer: ReturnType<typeof setTimeout> | null = null;
 
-  const scheduleFlush = () => {
-    if (raf !== null) return;
-    const run = () => {
-      raf = null;
-      const changed = [...pending];
-      pending.clear();
-      for (const mint of changed) {
+  // The heavy slot-machine roll takes ~0.55s to land, but the firehose can push
+  // a token's price 5x/s. Rendering every tick would leave the digits perpetually
+  // mid-spin — unreadable. So we throttle NOTIFICATIONS per mint to one per roll
+  // duration (the latest price is always in `prices`, so `get` stays fresh; a
+  // trailing flush guarantees the final value shows). The number stays live and
+  // readable instead of a blur. Chart/trade streams don't go through here.
+  const MIN_MS = 650;
+
+  const flush = () => {
+    raf = null;
+    timer = null;
+    const now = Date.now();
+    let soonest = Infinity;
+    for (const mint of [...pending]) {
+      const wait = MIN_MS - (now - (lastNotified.get(mint) ?? 0));
+      if (wait <= 0) {
+        lastNotified.set(mint, now);
+        pending.delete(mint);
         const ls = listeners.get(mint);
         if (ls) for (const l of ls) l();
+      } else if (wait < soonest) {
+        soonest = wait;
       }
-    };
+    }
+    // Some mints are still cooling down — re-flush when the soonest is eligible.
+    if (pending.size > 0 && soonest !== Infinity) {
+      timer = setTimeout(flush, soonest);
+    }
+  };
+
+  const scheduleFlush = () => {
+    if (raf !== null || timer !== null) return;
     raf =
       typeof requestAnimationFrame !== "undefined"
-        ? requestAnimationFrame(run)
-        : (setTimeout(run, 16) as unknown as number);
+        ? requestAnimationFrame(flush)
+        : (setTimeout(flush, 16) as unknown as number);
   };
 
   return {

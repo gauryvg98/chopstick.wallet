@@ -58,14 +58,19 @@ export function priceParts(price: number): {
 } {
   if (!isFinite(price) || price <= 0) return { text: "0.00", zeros: 0, sig: "" };
   if (price >= 1) return { text: price.toFixed(2), zeros: 0, sig: "" };
-  if (price >= 0.01) return { text: price.toFixed(4), zeros: 0, sig: "" };
+  // Down to 0.001, show 6 decimals: enough precision that a sub-percent tick
+  // actually moves a visible digit (toFixed(4) rounded those moves away, which
+  // is why prices looked frozen), while the fixed 6-wide field keeps every digit
+  // in a stable slot so only the ones that change roll.
+  if (price >= 0.001) return { text: price.toFixed(6), zeros: 0, sig: "" };
 
-  // Count leading zeros after "0."
-  const str = price.toFixed(20);
-  const frac = str.split(".")[1] ?? "";
-  let zeros = 0;
-  while (frac[zeros] === "0") zeros++;
-  const sig = frac.slice(zeros, zeros + 4).replace(/0+$/, "") || "0";
+  // Sub-0.001: subscript-zero notation with a FIXED 5 significant figures. No
+  // trailing-zero strip — a stable width means slots don't shift under the digits,
+  // so a tick rolls only what changed instead of re-spinning the whole number.
+  const exp = price.toExponential(4); // "1.7951e-7"
+  const [mant, eStr] = exp.split("e");
+  const zeros = -parseInt(eStr, 10) - 1; // leading zeros after "0."
+  const sig = mant.replace(".", ""); // exactly 5 digits, zero-padded
   return { text: "", zeros, sig };
 }
 
