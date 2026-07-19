@@ -62,7 +62,7 @@ func main() {
 	var prov provider.Provider
 	var discover func() ([]types.DiscoveryToken, []types.DiscoveryToken)
 	var fp *freedata.Provider // concrete handle for post-hub wiring
-	var firehosePrice func(string) (float64, bool) // per-trade price, wired into the hub below
+	var pushTick func(mint string, price float64) // per-trade price push, wired to the hub below
 
 	if os.Getenv("USE_MOCK") == "1" {
 		prov = mockdata.New()
@@ -183,7 +183,16 @@ func main() {
 		// powers the graduated feeds' live "moving now" numbers + volume ranking.
 		stats := livestats.New()
 		go stats.Run(ctx)
-		pa := pumpapi.New(universe.AddNew, universe.AddMigration, trades.Add, stats.Observe, solPrice)
+		// Every pump-native trade both updates livestats AND pushes an individual
+		// price tick to the ws hub the instant it arrives (pushTick wired after the
+		// hub exists) — no batching, freshest possible data per subscribed mint.
+		onStat := func(mint string, volUsd, priceUsd float64) {
+			stats.Observe(mint, volUsd, priceUsd)
+			if pushTick != nil {
+				pushTick(mint, priceUsd)
+			}
+		}
+		pa := pumpapi.New(universe.AddNew, universe.AddMigration, trades.Add, onStat, solPrice)
 		ensureSub := func(mint string) {
 			sampler.Watch(mint)
 			pa.Watch(mint)
@@ -198,7 +207,6 @@ func main() {
 		}
 		fp.SetLive(ensureSub, trades.Trades, liveCandles)
 		fp.SetLiveStats(stats.Snapshot)
-		firehosePrice = stats.LastPrice // hub pushes these per-trade (wired below)
 		go pa.Run(ctx)
 
 		// Live-movers banner: actively-trading bonding-curve tokens (the ones that
@@ -306,7 +314,7 @@ func main() {
 	}
 	hub := ws.NewHub(jup, warm)
 	hub.SetObserver(mx.Observe)
-	hub.SetLivePrice(firehosePrice) // trade-fresh prices for pump tokens (nil-safe)
+	pushTick = hub.PushPrice // firehose trades now push individual ticks (nil-safe until here)
 	go hub.Run(ctx)
 
 	// Push the discover feed (new + graduating + trending) over the websocket so

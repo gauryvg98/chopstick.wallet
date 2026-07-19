@@ -49,16 +49,9 @@ func (c *Client) readPump() {
 				}
 			}
 			if len(fresh) > 0 {
-				c.hub.addSubs(fresh)
-				// instant first paint from last-known prices
-				if snap := c.hub.snapshot(fresh); len(snap) > 0 {
-					if msg, err := json.Marshal(map[string]any{"type": "prices", "data": snap}); err == nil {
-						select {
-						case c.send <- msg:
-						default:
-						}
-					}
-				}
+				// addSubs registers the per-mint fan-out AND sends an instant
+				// first-paint snapshot from last-known prices.
+				c.hub.addSubs(c, fresh)
 			}
 		case "unsub":
 			var gone []string
@@ -69,7 +62,7 @@ func (c *Client) readPump() {
 				}
 			}
 			if len(gone) > 0 {
-				c.hub.delSubs(gone)
+				c.hub.delSubs(c, gone)
 			}
 		case "sub_candles":
 			if m.Mint == "" || m.Tf == "" {

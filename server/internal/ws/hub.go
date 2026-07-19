@@ -34,7 +34,7 @@ type Hub struct {
 	count      atomic.Int64
 
 	mu         sync.Mutex
-	subs       map[string]int // mint -> refcount across clients
+	priceSubs  map[string]map[*Client]bool // mint -> clients watching it (per-mint fan-out)
 	lastPrices map[string]jupiter.PriceTick
 	// Mints Jupiter can price (graduated / DEX-listed). The firehose price is only
 	// for tokens Jupiter CAN'T price (fresh bonding-curve) — for anything Jupiter
@@ -46,7 +46,6 @@ type Hub struct {
 	candleSubs map[string]map[*Client]bool // who wants this (mint,tf) stream
 	candleBars map[string]*candleBar        // the forming bar per (mint,tf)
 	sampled    func(string) (float64, bool) // fallback price for non-Jupiter mints
-	livePrice  func(string) (float64, bool) // per-trade firehose price (pump tokens)
 
 	// discover feed streaming (one global feed)
 	discoverSubs map[*Client]bool
@@ -100,7 +99,7 @@ func NewHub(pricer Pricer, warm func() []string) *Hub {
 		unregister: make(chan *Client),
 		broadcast:  make(chan []byte, 8),
 		clients:    make(map[*Client]bool),
-		subs:       make(map[string]int),
+		priceSubs:  make(map[string]map[*Client]bool),
 		lastPrices: make(map[string]jupiter.PriceTick),
 		jupPriced:  make(map[string]bool),
 		candleSubs:   make(map[string]map[*Client]bool),
@@ -117,7 +116,6 @@ func NewHub(pricer Pricer, warm func() []string) *Hub {
 
 func (h *Hub) Run(ctx context.Context) {
 	go h.priceLoop(ctx)
-	go h.firehosePriceLoop(ctx)
 	go h.discoverLoop(ctx)
 	go h.tradesLoop(ctx)
 	for {
@@ -132,7 +130,7 @@ func (h *Hub) Run(ctx context.Context) {
 				delete(h.clients, c)
 				h.count.Add(-1)
 				close(c.send)
-				h.delSubs(keys(c.subs))
+				h.delPriceSubsForClient(c)
 				h.delCandleSubsForClient(c)
 				h.delAuxSubsForClient(c)
 			}
@@ -186,12 +184,9 @@ func (h *Hub) priceLoop(ctx context.Context) {
 				h.jupPriced[m] = true // Jupiter owns this mint's price
 			}
 			h.mu.Unlock()
-			if msg, err := json.Marshal(map[string]any{"type": "prices", "data": prices}); err == nil {
-				select {
-				case h.broadcast <- msg:
-				case <-ctx.Done():
-					return
-				}
+			// Fan out each mint to only the clients watching it — no global map.
+			for m, p := range prices {
+				h.sendTick(m, p)
 			}
 		}
 		// Fold the latest known price into the candle streams every cycle (even on
@@ -212,8 +207,13 @@ func (h *Hub) mints() []string {
 		}
 	}
 	h.mu.Lock()
-	for m := range h.subs {
+	for m := range h.priceSubs {
 		add(m)
+	}
+	// Charted tokens need a price too (to build the live candle) even if no one
+	// subscribed to their price readout.
+	for key := range h.candleSubs {
+		add(key[:strings.IndexByte(key, '|')])
 	}
 	h.mu.Unlock()
 	if h.warm != nil {
@@ -227,25 +227,108 @@ func (h *Hub) mints() []string {
 	return out
 }
 
-func (h *Hub) addSubs(mints []string) {
+// addSubs registers a client for per-mint price ticks and immediately sends it
+// the current price for each mint, so a fresh subscription paints without
+// waiting for the next tick.
+func (h *Hub) addSubs(c *Client, mints []string) {
 	h.mu.Lock()
+	snap := make(map[string]jupiter.PriceTick, len(mints))
 	for _, m := range mints {
-		h.subs[m]++
+		if h.priceSubs[m] == nil {
+			h.priceSubs[m] = map[*Client]bool{}
+		}
+		h.priceSubs[m][c] = true
+		if p, ok := h.lastPrices[m]; ok && p.Price > 0 {
+			snap[m] = p
+		}
 	}
 	h.mu.Unlock()
+	if len(snap) > 0 {
+		if msg, err := json.Marshal(map[string]any{"type": "prices", "data": snap}); err == nil {
+			select {
+			case c.send <- msg:
+			default:
+			}
+		}
+	}
 }
 
-func (h *Hub) delSubs(mints []string) {
+func (h *Hub) delSubs(c *Client, mints []string) {
 	h.mu.Lock()
 	for _, m := range mints {
-		if h.subs[m] > 0 {
-			h.subs[m]--
-			if h.subs[m] == 0 {
-				delete(h.subs, m)
+		if subs := h.priceSubs[m]; subs != nil {
+			delete(subs, c)
+			if len(subs) == 0 {
+				delete(h.priceSubs, m)
 			}
 		}
 	}
 	h.mu.Unlock()
+}
+
+func (h *Hub) delPriceSubsForClient(c *Client) {
+	h.mu.Lock()
+	for m, subs := range h.priceSubs {
+		if subs[c] {
+			delete(subs, c)
+			if len(subs) == 0 {
+				delete(h.priceSubs, m)
+			}
+		}
+	}
+	h.mu.Unlock()
+}
+
+// sendTick pushes one mint's price to just the clients watching it — an
+// individual, freshest-possible tick, never a batched global map.
+func (h *Hub) sendTick(mint string, tick jupiter.PriceTick) {
+	h.mu.Lock()
+	subs := h.priceSubs[mint]
+	if len(subs) == 0 {
+		h.mu.Unlock()
+		return
+	}
+	clients := make([]*Client, 0, len(subs))
+	for c := range subs {
+		clients = append(clients, c)
+	}
+	h.mu.Unlock()
+	msg, err := json.Marshal(map[string]any{
+		"type": "prices", "data": map[string]jupiter.PriceTick{mint: tick},
+	})
+	if err != nil {
+		return
+	}
+	for _, c := range clients {
+		select {
+		case c.send <- msg:
+		default: // slow client — drop this tick
+		}
+	}
+}
+
+// PushPrice delivers a per-trade firehose price the instant it arrives, straight
+// to the mint's subscribers. Skips mints Jupiter prices (it's authoritative for
+// graduated tokens) and no-ops when nobody's watching, so the global firehose
+// costs a cheap map lookup per trade.
+func (h *Hub) PushPrice(mint string, price float64) {
+	if price <= 0 {
+		return
+	}
+	h.mu.Lock()
+	if h.jupPriced[mint] || len(h.priceSubs[mint]) == 0 {
+		h.mu.Unlock()
+		return
+	}
+	prev := h.lastPrices[mint]
+	if prev.Price == price {
+		h.mu.Unlock()
+		return // unchanged — nothing to send
+	}
+	prev.Price = price // keep the last known change24h
+	h.lastPrices[mint] = prev
+	h.mu.Unlock()
+	h.sendTick(mint, prev)
 }
 
 // PriceOf returns the last live price for a mint, if the hub has fetched it.
@@ -263,80 +346,6 @@ func (h *Hub) PriceOf(mint string) (float64, bool) {
 // SetSampledPrice wires a fallback price source (the provider's sampler) used
 // to build candles for mints Jupiter doesn't price.
 func (h *Hub) SetSampledPrice(fn func(string) (float64, bool)) { h.sampled = fn }
-
-// SetLivePrice wires the per-trade firehose price (livestats.LastPrice). It's
-// polled fast (below) so a subscribed pump.fun token's price ticks on its actual
-// fills instead of Jupiter's ~1s cadence — the difference between a page that
-// pulses and one that looks frozen.
-func (h *Hub) SetLivePrice(fn func(string) (float64, bool)) { h.livePrice = fn }
-
-// firehosePriceLoop pushes trade-fresh prices for subscribed mints ~5×/s. It
-// layers on top of the Jupiter loop: Jupiter still supplies change24h and prices
-// for tokens the firehose doesn't cover (established graduates), while this makes
-// actively-trading pump tokens tick on every fill. Only mints whose price
-// actually moved are sent, so a quiet token costs nothing.
-func (h *Hub) firehosePriceLoop(ctx context.Context) {
-	const iv = 200 * time.Millisecond
-	t := time.NewTicker(iv)
-	defer t.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-t.C:
-		}
-		if h.livePrice == nil || h.count.Load() == 0 {
-			continue
-		}
-		// Snapshot the subscribed set without holding the lock across livePrice.
-		h.mu.Lock()
-		mints := make([]string, 0, len(h.subs))
-		for m := range h.subs {
-			mints = append(mints, m)
-		}
-		h.mu.Unlock()
-
-		type upd struct {
-			mint string
-			px   float64
-		}
-		var updates []upd
-		for _, m := range mints {
-			if px, ok := h.livePrice(m); ok {
-				updates = append(updates, upd{m, px})
-			}
-		}
-		if len(updates) == 0 {
-			continue
-		}
-
-		batch := make(map[string]jupiter.PriceTick, len(updates))
-		h.mu.Lock()
-		for _, u := range updates {
-			if h.jupPriced[u.mint] {
-				continue // Jupiter prices this mint — never override with a pump-pool tick
-			}
-			prev := h.lastPrices[u.mint]
-			if prev.Price == u.px {
-				continue // unchanged — don't spam a still price
-			}
-			prev.Price = u.px // keep the last known change24h
-			h.lastPrices[u.mint] = prev
-			batch[u.mint] = prev
-		}
-		h.mu.Unlock()
-		if len(batch) == 0 {
-			continue
-		}
-		if msg, err := json.Marshal(map[string]any{"type": "prices", "data": batch}); err == nil {
-			select {
-			case h.broadcast <- msg:
-			case <-ctx.Done():
-				return
-			}
-		}
-	}
-}
 
 // CandleKey identifies one actively-streamed chart.
 type CandleKey struct{ Mint, Tf string }
@@ -366,7 +375,6 @@ func (h *Hub) addCandleSub(c *Client, mint, tf string) {
 		h.candleSubs[key] = map[*Client]bool{}
 	}
 	h.candleSubs[key][c] = true
-	h.subs[mint]++
 	h.mu.Unlock()
 	// Viewing a token on any timeframe warms its sub-minute sampler, so 1s/5s/30s
 	// already have history if/when the user switches to them.
@@ -412,12 +420,6 @@ func (h *Hub) removeCandleLocked(c *Client, key, mint string) {
 	if m := h.candleSubs[key]; m != nil {
 		if m[c] {
 			delete(m, c)
-			if h.subs[mint] > 0 {
-				h.subs[mint]--
-				if h.subs[mint] == 0 {
-					delete(h.subs, mint)
-				}
-			}
 		}
 		if len(m) == 0 {
 			delete(h.candleSubs, key)
@@ -669,18 +671,6 @@ func (h *Hub) delAuxSubsForClient(c *Client) {
 	h.mu.Unlock()
 }
 
-func (h *Hub) snapshot(mints []string) map[string]jupiter.PriceTick {
-	out := make(map[string]jupiter.PriceTick)
-	h.mu.Lock()
-	for _, m := range mints {
-		if p, ok := h.lastPrices[m]; ok {
-			out[m] = p
-		}
-	}
-	h.mu.Unlock()
-	return out
-}
-
 // ServeWS upgrades the request to a websocket and registers the client.
 func (h *Hub) ServeWS(w http.ResponseWriter, r *http.Request) {
 	conn, err := h.upgrader.Upgrade(w, r, nil)
@@ -691,12 +681,4 @@ func (h *Hub) ServeWS(w http.ResponseWriter, r *http.Request) {
 	h.register <- c
 	go c.writePump()
 	go c.readPump()
-}
-
-func keys(m map[string]bool) []string {
-	out := make([]string, 0, len(m))
-	for k := range m {
-		out = append(out, k)
-	}
-	return out
 }

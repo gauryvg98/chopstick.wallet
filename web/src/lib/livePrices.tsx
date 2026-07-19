@@ -43,13 +43,13 @@ function createPriceStore() {
   let raf: number | null = null;
   let timer: ReturnType<typeof setTimeout> | null = null;
 
-  // The heavy slot-machine roll takes ~0.55s to land, but the firehose can push
-  // a token's price 5x/s. Rendering every tick would leave the digits perpetually
-  // mid-spin — unreadable. So we throttle NOTIFICATIONS per mint to one per roll
-  // duration (the latest price is always in `prices`, so `get` stays fresh; a
-  // trailing flush guarantees the final value shows). The number stays live and
-  // readable instead of a blur. Chart/trade streams don't go through here.
-  const MIN_MS = 650;
+  // Prices arrive as individual per-mint ticks (no server batching). We keep only
+  // a light floor between renders per mint so the digits stay readable — the roll
+  // retargets mid-flight as continuous weighty motion rather than restarting — but
+  // small enough that fast tokens visibly pulse. The latest price is always in
+  // `prices` (so `get` stays fresh) and a trailing flush guarantees the final
+  // value shows. Chart/trade streams don't go through here.
+  const MIN_MS = 250;
 
   const flush = () => {
     raf = null;
