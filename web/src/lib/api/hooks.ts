@@ -61,19 +61,24 @@ export function useToken(address: string | null) {
 // needed. Live candles ride in on the WS candle stream (rendered as they form).
 // Same name/shape as before, so the chart consumes it unchanged.
 export function useOHLCV(address: string | null, tf: Timeframe, _fast = false) {
-  const [data, setData] = useState<OHLCV[] | undefined>(undefined);
+  // Store the bars WITH the (address,tf) they belong to. On a token switch the
+  // key changes synchronously, so the getter below returns undefined the same
+  // render — the chart never sees the previous token's bars (which produced a
+  // garbage "bridge" candle from the old price to the new one).
+  const [entry, setEntry] = useState<{ key: string; data: OHLCV[] } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const key = `${address}|${tf}`;
 
   useEffect(() => {
     if (!address) {
-      setData(undefined);
+      setEntry(null);
       setIsLoading(false);
       return;
     }
+    const myKey = `${address}|${tf}`;
     let cancelled = false;
     let interval: ReturnType<typeof setInterval> | null = null;
     setIsLoading(true);
-    setData(undefined); // reset on token / timeframe change
 
     const subMinute = tf === "1s" || tf === "5s" || tf === "30s";
 
@@ -98,13 +103,13 @@ export function useOHLCV(address: string | null, tf: Timeframe, _fast = false) {
       const first = await fetchBars(20, 2);
       if (cancelled) return;
       if (first.length) {
-        setData(first);
+        setEntry({ key: myKey, data: first });
         setIsLoading(false);
       }
       // 2) full window — render as soon as we get it.
       const full = await fetchBars(120, 4);
       if (cancelled) return;
-      if (full.length) setData(full);
+      if (full.length) setEntry({ key: myKey, data: full });
       setIsLoading(false);
     })();
 
@@ -114,7 +119,7 @@ export function useOHLCV(address: string | null, tf: Timeframe, _fast = false) {
       interval = setInterval(async () => {
         try {
           const bars = await client.getOHLCV(address, tf, 120);
-          if (!cancelled && bars && bars.length) setData(bars);
+          if (!cancelled && bars && bars.length) setEntry({ key: myKey, data: bars });
         } catch {
           /* ignore */
         }
@@ -127,6 +132,9 @@ export function useOHLCV(address: string | null, tf: Timeframe, _fast = false) {
     };
   }, [address, tf]);
 
+  // Only expose bars that belong to the CURRENT (address,tf); during a switch the
+  // stale entry's key won't match, so `data` is undefined until the new fetch lands.
+  const data = entry && entry.key === key ? entry.data : undefined;
   return { data, isLoading };
 }
 

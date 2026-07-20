@@ -125,8 +125,13 @@ export function PriceChart({
   ctxRef.current = { symbol, tf, metric };
   const { data, isLoading } = useOHLCV(address, tf, fast);
   const [streamed, setStreamed] = useState(false);
-  // Reset the "got a live bar" flag whenever the token/timeframe changes.
-  useEffect(() => setStreamed(false), [address, tf]);
+  // On a token/timeframe switch, reset the "got a live bar" flag AND drop the last
+  // bar — otherwise the new token's first live tick bridges from the OLD token's
+  // close, drawing a garbage candle from the old price to the new one.
+  useEffect(() => {
+    setStreamed(false);
+    lastBarRef.current = null;
+  }, [address, tf]);
   const empty = (!data || data.length === 0) && !streamed;
 
   // Paint the OHLC legend for a given bar (the hovered one, else the latest).
